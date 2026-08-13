@@ -17,7 +17,8 @@ const CATEGORY_ORDER: Record<string, number> = {
   'Duta Bahasa': 16,
   'Duta Seni': 17,
   'Persahabatan': 18,
-  'Digital': 19,
+  'Intelegensia': 19,
+  'Digital': 20,
   'Other': 99,
 }
 
@@ -26,7 +27,7 @@ function renderInitial(name: string) {
 }
 
 function TitleholderCard({ item, gender }: { item: any; gender: string }) {
-  const isCombined = item.category?.startsWith('Duta') || item.category === 'Berbakat' || item.category === 'Fotogenik' || item.category === 'Persahabatan'
+  const isCombined = item.category?.startsWith('Duta') || item.category === 'Berbakat' || item.category === 'Fotogenik' || item.category === 'Persahabatan' || item.category === 'Intelegensia'
   return (
     <div className="rounded-[20px] border border-border bg-white overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
       <div className="aspect-[3/4] overflow-hidden bg-light-gray">

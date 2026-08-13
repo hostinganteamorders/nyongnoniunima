@@ -133,7 +133,7 @@ export const alumniAchievementSchema = z.object({
 
 export const titleholderSchema = z.object({
   tahun: z.coerce.number().min(2000, 'Tahun minimal 2000').max(2100, 'Tahun maksimal 2100'),
-  category: z.enum(['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Other'], {
+  category: z.enum(['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'], {
     errorMap: () => ({ message: 'Pilih kategori' }),
   }),
   nyong_name: z.string().min(3, 'Nama Nyong minimal 3 karakter'),
@@ -174,6 +174,7 @@ export const currentTitleholderSchema = z.object({
     'Nyong Duta Bahasa', 'Noni Duta Bahasa',
     'Nyong Duta Seni', 'Noni Duta Seni',
     'Nyong Persahabatan', 'Noni Persahabatan',
+    'Nyong Intelegensia', 'Noni Intelegensia',
   ], { errorMap: () => ({ message: 'Pilih gelar' }) }),
   name: z.string().min(3, 'Nama minimal 3 karakter'),
   faculty: z.string().optional(),

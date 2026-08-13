@@ -13,6 +13,7 @@ export const TITLE_PAIRS: [string, string][] = [
   ['Nyong Duta Bahasa', 'Noni Duta Bahasa'],
   ['Nyong Duta Seni', 'Noni Duta Seni'],
   ['Nyong Persahabatan', 'Noni Persahabatan'],
+  ['Nyong Intelegensia', 'Noni Intelegensia'],
 ]
 
 export const PAIR_LABELS: Record<string, string> = {
@@ -44,6 +45,8 @@ export const PAIR_LABELS: Record<string, string> = {
   'Noni Duta Seni': 'Duta Seni Nyong Noni UNIMA 2025',
   'Nyong Persahabatan': 'Persahabatan Nyong Noni UNIMA 2025',
   'Noni Persahabatan': 'Persahabatan Nyong Noni UNIMA 2025',
+  'Nyong Intelegensia': 'Intelegensia Nyong Noni UNIMA 2025',
+  'Noni Intelegensia': 'Intelegensia Nyong Noni UNIMA 2025',
 }
 
 export const GENDER_TITLES = {
@@ -56,7 +59,8 @@ export function isCombinedTitle(title: string) {
     title.includes('Duta') ||
     title.includes('Berbakat') ||
     title.includes('Fotogenik') ||
-    title.includes('Persahabatan')
+    title.includes('Persahabatan') ||
+    title.includes('Intelegensia')
   )
 }
 

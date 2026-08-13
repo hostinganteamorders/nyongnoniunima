@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS public.current_titleholders (
     'Nyong Duta Budaya', 'Noni Duta Budaya',
     'Nyong Duta Bahasa', 'Noni Duta Bahasa',
     'Nyong Duta Seni', 'Noni Duta Seni',
-    'Nyong Persahabatan', 'Noni Persahabatan'
+    'Nyong Persahabatan', 'Noni Persahabatan',
+    'Nyong Intelegensia', 'Noni Intelegensia'
   )),
   name TEXT NOT NULL,
   faculty TEXT,

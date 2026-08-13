@@ -1,5 +1,6 @@
 import { Award, Globe, MapPin, Users, Target, Eye, ChevronRight, Calendar, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 
 const milestones = [
@@ -67,6 +68,14 @@ export default function AboutPage() {
       {/* ─── HERO ─── */}
       <section className="gradient-hero relative flex flex-col items-center justify-center pt-[180px] pb-[96px] px-[20px] text-center">
         <div className="max-w-4xl mx-auto">
+          <Image
+            src="/images/logo-nyong-noni-unima.png"
+            alt="Logo Nyong Noni UNIMA"
+            width={128}
+            height={128}
+            className="w-28 h-28 sm:w-36 sm:h-36 object-contain mx-auto mb-8"
+            priority
+          />
           <p className="text-caption text-gold-light uppercase tracking-widest mb-4">Tentang</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
             About Nyong Noni <br />

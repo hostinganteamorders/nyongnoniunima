@@ -250,7 +250,7 @@ export interface Database {
         Row: {
           id: string
           tahun: number
-          category: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Persahabatan' | 'Digital' | 'Other'
+          category: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Fotogenik' | 'Persahabatan' | 'Digital' | 'Duta Lingkungan' | 'Duta Sosial' | 'Duta Budaya' | 'Duta Bahasa' | 'Duta Seni' | 'Intelegensia' | 'Other'
           nyong_name: string
           noni_name: string
           faculty: string | null
@@ -269,7 +269,7 @@ export interface Database {
         Insert: {
           id?: string
           tahun: number
-          category: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Persahabatan' | 'Digital' | 'Other'
+          category: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Fotogenik' | 'Persahabatan' | 'Digital' | 'Duta Lingkungan' | 'Duta Sosial' | 'Duta Budaya' | 'Duta Bahasa' | 'Duta Seni' | 'Intelegensia' | 'Other'
           nyong_name: string
           noni_name: string
           faculty?: string | null
@@ -288,7 +288,7 @@ export interface Database {
         Update: {
           id?: string
           tahun?: number
-          category?: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Persahabatan' | 'Digital' | 'Other'
+          category?: 'Juara Utama' | 'Wakil I' | 'Wakil II' | 'Harapan I' | 'Harapan II' | 'Berbakat' | 'Favorit' | 'Fotogenik' | 'Persahabatan' | 'Digital' | 'Duta Lingkungan' | 'Duta Sosial' | 'Duta Budaya' | 'Duta Bahasa' | 'Duta Seni' | 'Intelegensia' | 'Other'
           nyong_name?: string
           noni_name?: string
           faculty?: string | null

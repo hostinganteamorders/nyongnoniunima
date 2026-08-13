@@ -27,6 +27,7 @@ const TITLEHOLDER_CATEGORY_ORDER: Record<string, number> = {
   'Favorit': 11,
   'Persahabatan': 12,
   'Digital': 13,
+  'Intelegensia': 14,
   'Other': 99,
 }
 
