@@ -128,10 +128,10 @@ export function FinalistsCarousel({ items, speed = 0.4 }: Props) {
             )}
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gold mb-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-accent mb-1.5">
                 Finalist 2026
               </p>
               <h3 className="text-headline text-white font-bold leading-tight">

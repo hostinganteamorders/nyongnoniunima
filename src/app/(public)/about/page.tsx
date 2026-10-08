@@ -71,15 +71,15 @@ export default function AboutPage() {
           <Image
             src="/images/logo-nyong-noni-unima.png"
             alt="Logo Nyong Noni UNIMA"
-            width={128}
-            height={128}
-            className="w-28 h-28 sm:w-36 sm:h-36 object-contain mx-auto mb-8"
+            width={720}
+            height={796}
+            className="w-36 sm:w-44 lg:w-48 h-auto mx-auto mb-8 brightness-0 invert drop-shadow-lg"
             priority
           />
-          <p className="text-caption text-gold-light uppercase tracking-widest mb-4">Tentang</p>
+          <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Tentang</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
             About Nyong Noni <br />
-            <span className="text-gold">UNIMA</span>
+            <span className="text-accent">UNIMA</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
             Ajang bergengsi pemilihan duta wisata dan budaya Universitas Negeri Manado yang melahirkan generasi muda terbaik Sulawesi Utara.
@@ -102,7 +102,7 @@ export default function AboutPage() {
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-[#003DA5] uppercase tracking-widest mb-2">Nilai Inti</p>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Nilai Inti</p>
             <h2 className="text-display-lg text-dark-text">Core Values</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -110,8 +110,8 @@ export default function AboutPage() {
               const Icon = v.icon
               return (
                 <div key={v.title} className="bg-white rounded-xl border border-border p-8 interactive-hover shadow-sm min-h-[250px]">
-                  <div className="w-12 h-12 rounded-lg bg-[#003DA5]/10 flex items-center justify-center mb-6">
-                    <Icon className="h-6 w-6 text-[#003DA5]" />
+                  <div className="w-12 h-12 rounded-lg bg-primary-blue/10 flex items-center justify-center mb-6">
+                    <Icon className="h-6 w-6 text-primary-blue" />
                   </div>
                   <h3 className="text-headline text-dark-text mb-3">{v.title}</h3>
                   <p className="text-body-sm text-dark-secondary leading-relaxed">{v.desc}</p>
@@ -138,8 +138,8 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="bg-light-gray p-10 rounded-xl h-full flex flex-col justify-center border border-border">
-              <div className="w-12 h-12 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center mb-6">
-                <Target className="h-6 w-6 text-gold" />
+              <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-6">
+                <Target className="h-6 w-6 text-accent" />
               </div>
               <h2 className="text-display-md text-dark-text mb-6">Misi</h2>
               <ul className="space-y-4">
@@ -151,7 +151,7 @@ export default function AboutPage() {
                   'Menjalin kerjasama dengan Dinas Pariwisata dan stakeholder terkait',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-4">
-                    <CheckCircle className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                     <span className="text-body text-dark-secondary">{item}</span>
                   </li>
                 ))}
@@ -165,7 +165,7 @@ export default function AboutPage() {
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-[#003DA5] uppercase tracking-widest mb-2">Struktur</p>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Struktur</p>
             <h2 className="text-display-lg text-dark-text">Organizational Structure</h2>
           </div>
           <div className="flex flex-col items-center">
@@ -175,7 +175,7 @@ export default function AboutPage() {
               <p className="text-body-sm text-white/70">{orgStructure[0].desc}</p>
             </div>
             {/* Connector line */}
-            <div className="w-px h-8 bg-[#003DA5]/30" />
+            <div className="w-px h-8 bg-primary-blue/30" />
             {/* Tree branches */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full max-w-4xl">
               {orgStructure.slice(1).map((item) => (
@@ -193,13 +193,13 @@ export default function AboutPage() {
       <section className="py-[96px]">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-[#003DA5] uppercase tracking-widest mb-2">Tahapan</p>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Tahapan</p>
             <h2 className="text-display-lg text-dark-text">Selection Process</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {selectionSteps.map((s) => (
               <div key={s.step} className="bg-white rounded-xl border border-border p-8 shadow-sm relative">
-                <div className="w-10 h-10 rounded-full bg-[#003DA5] text-white flex items-center justify-center text-headline font-bold mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary-blue text-white flex items-center justify-center text-headline font-bold mb-4">
                   {s.step}
                 </div>
                 <h3 className="text-headline text-dark-text mb-2">{s.title}</h3>
@@ -214,15 +214,15 @@ export default function AboutPage() {
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-3xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-[#003DA5] uppercase tracking-widest mb-2">Sejarah</p>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Sejarah</p>
             <h2 className="text-display-lg text-dark-text">Perjalanan Sejarah</h2>
           </div>
-          <div className="relative pl-8 border-l-2 border-[#003DA5]/20 ml-4 md:ml-0">
+          <div className="relative pl-8 border-l-2 border-primary-blue/20 ml-4 md:ml-0">
             <div className="space-y-12">
               {milestones.map((m) => (
                 <div key={m.year} className="relative">
-                  <div className="absolute -left-[45px] top-1.5 w-5 h-5 rounded-full bg-[#003DA5] outline outline-4 outline-light-gray" />
-                  <span className="text-headline text-[#003DA5] block mb-2 font-bold">{m.year}</span>
+                  <div className="absolute -left-[45px] top-1.5 w-5 h-5 rounded-full bg-primary-blue outline outline-4 outline-light-gray" />
+                  <span className="text-headline text-primary-blue block mb-2 font-bold">{m.year}</span>
                   <p className="text-body-sm text-dark-secondary">{m.event}</p>
                 </div>
               ))}
@@ -235,14 +235,14 @@ export default function AboutPage() {
       <section className="py-[96px]">
         <div className="mx-auto max-w-4xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-[#003DA5] uppercase tracking-widest mb-2">Kalender</p>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Kalender</p>
             <h2 className="text-display-lg text-dark-text">Annual Timeline</h2>
             <p className="text-body text-dark-secondary mt-2">Rangkaian kegiatan tahunan Nyong Noni UNIMA</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {annualTimeline.map((item) => (
               <div key={item.month} className="bg-white rounded-xl border border-border p-6 shadow-sm flex items-start gap-4">
-                <Calendar className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <Calendar className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-body-sm font-semibold text-dark-text mb-1">{item.month}</p>
                   <p className="text-body-sm text-dark-secondary">{item.event}</p>
@@ -264,7 +264,7 @@ export default function AboutPage() {
           </p>
           <div className="flex justify-center gap-4">
             <Link href="/register">
-              <Button variant="gold" className="h-14 px-8 text-lg">
+              <Button variant="accent" className="h-14 px-8 text-lg">
                 Daftar Sekarang
               </Button>
             </Link>

@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         primary: 'bg-primary-blue text-white rounded-pill px-6 py-2.5 hover:bg-primary-blue-dark',
         secondary: 'bg-light-gray text-dark-text rounded-pill px-6 py-2.5 border border-border hover:bg-border',
-        gold: 'bg-gold text-dark-text rounded-pill px-6 py-2.5 hover:bg-gold-light font-bold',
+        accent: 'bg-accent text-dark-text rounded-pill px-6 py-2.5 hover:bg-accent-light font-bold',
         'icon-circular': 'bg-light-gray text-dark-text rounded-full size-[40px] hover:bg-border',
         ghost: 'hover:bg-light-gray text-dark-text rounded-pill px-6 py-2.5',
         link: 'text-primary-blue underline-offset-4 hover:underline px-2 py-2.5',

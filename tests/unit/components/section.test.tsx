@@ -23,9 +23,9 @@ describe('Section', () => {
     expect(container.firstChild).toHaveClass('bg-light-gray')
   })
 
-  it('applies gold variant class', () => {
-    const { container } = render(<Section variant="gold">Content</Section>)
-    expect(container.firstChild).toHaveClass('bg-gold')
+  it('applies accent variant class', () => {
+    const { container } = render(<Section variant="accent">Content</Section>)
+    expect(container.firstChild).toHaveClass('bg-accent')
   })
 
   it('applies custom className', () => {

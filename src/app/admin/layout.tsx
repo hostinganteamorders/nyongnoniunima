@@ -55,7 +55,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA]">
+    <div className="flex min-h-screen bg-light-gray">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -65,19 +65,19 @@ export default function AdminLayout({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#E2E8F0] bg-white transition-transform duration-200 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-white transition-transform duration-200 lg:static lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#E2E8F0] px-6">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-6">
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-xs font-bold text-[#003DA5]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-primary-blue">
               NN
             </div>
-            <span className="text-sm font-semibold text-[#003DA5]">Nyong Noni</span>
+            <span className="text-sm font-semibold text-primary-blue">Nyong Noni</span>
           </Link>
           <button
-            className="text-[#6B7280] hover:text-[#1A1A1A] lg:hidden"
+            className="text-muted hover:text-dark-text lg:hidden"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
           >
@@ -98,8 +98,8 @@ export default function AdminLayout({
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-[#003DA5] text-white'
-                    : 'text-[#6B7280] hover:bg-[#F8F9FA] hover:text-[#1A1A1A]',
+                    ? 'bg-primary-blue text-white'
+                    : 'text-muted hover:bg-light-gray hover:text-dark-text',
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -110,17 +110,17 @@ export default function AdminLayout({
           })}
         </nav>
 
-        <div className="shrink-0 border-t border-[#E2E8F0] p-3">
+        <div className="shrink-0 border-t border-border p-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#6B7280] transition-colors hover:bg-[#F8F9FA] hover:text-[#1A1A1A]"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-light-gray hover:text-dark-text"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             Logout
           </button>
           <Link
             href="/"
-            className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[#6B7280] transition-colors hover:bg-[#F8F9FA] hover:text-[#1A1A1A]"
+            className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted transition-colors hover:bg-light-gray hover:text-dark-text"
           >
             &larr; Back to Website
           </Link>
@@ -128,16 +128,16 @@ export default function AdminLayout({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#E2E8F0] bg-white px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-6">
           <div className="flex items-center gap-3">
             <button
-              className="text-[#6B7280] hover:text-[#1A1A1A] lg:hidden"
+              className="text-muted hover:text-dark-text lg:hidden"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="text-xs font-medium uppercase tracking-widest text-[#6B7280]">
+            <span className="text-xs font-medium uppercase tracking-widest text-muted">
               Nyong Noni UNIMA Admin
             </span>
           </div>

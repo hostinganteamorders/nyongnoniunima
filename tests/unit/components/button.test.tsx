@@ -14,10 +14,10 @@ describe('Button', () => {
     expect(button.className).toContain('bg-primary')
   })
 
-  it('applies gold variant classes', () => {
-    render(<Button variant="gold">Gold</Button>)
-    const button = screen.getByText('Gold')
-    expect(button.className).toContain('bg-gold')
+  it('applies accent variant classes', () => {
+    render(<Button variant="accent">Accent</Button>)
+    const button = screen.getByText('Accent')
+    expect(button.className).toContain('bg-accent')
   })
 
   it('applies custom className', () => {

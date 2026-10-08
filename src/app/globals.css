@@ -1,26 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand Colors - Nyong Noni UNIMA */
-  --color-primary-blue: #003DA5;
-  --color-primary-blue-dark: #002D7A;
-  --color-primary-blue-light: #0050D4;
-  --color-gold: #D4AF37;
-  --color-gold-light: #E0C35A;
-  --color-gold-dark: #B8942E;
+  /* Brand Colors - Nyong Noni UNIMA (Navy / Blue / White) */
+  --color-primary-blue: #2F5593;
+  --color-primary-blue-dark: #1F4176;
+  --color-primary-blue-light: #4472C4;
+  --color-accent: #0EA5E9;
+  --color-accent-light: #38BDF8;
+  --color-accent-dark: #0284C7;
   --color-white: #FFFFFF;
-  --color-light-gray: #F8F9FA;
+  --color-light-gray: #F5F8FC;
   --color-dark-text: #1A1A1A;
   --color-dark-secondary: #4A4A4A;
   --color-border: #E2E8F0;
-  --color-border-dark: #CBD5E1;
+  --color-muted: #64748B;
+  --color-primary: #2F5593;
+  --color-ring: #2F5593;
   --color-success: #22C55E;
   --color-warning: #F59E0B;
   --color-error: #EF4444;
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #F8F9FA;
-  --color-ink: #1A1A1A;
-  --color-ink-muted: #6B7280;
 
   /* Typography */
   --font-sans: var(--font-inter), system-ui, sans-serif;
@@ -39,27 +37,12 @@
   --spacing-section: 80px;
 }
 
-/* Dark mode overrides */
-.dark {
-  --color-surface: #0F172A;
-  --color-surface-alt: #1E293B;
-  --color-ink: #F1F5F9;
-  --color-ink-muted: #94A3B8;
-  --color-border: #334155;
-  --color-border-dark: #475569;
-  --color-light-gray: #1E293B;
-}
-
 @layer base {
   body {
     @apply bg-white text-dark-text antialiased;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  .dark body {
-    @apply bg-surface text-ink;
   }
 
   ::selection {
@@ -163,16 +146,13 @@
   .glass-card {
     @apply bg-white/80 backdrop-blur-sm border border-border/50 rounded-xl shadow-sm;
   }
-  .dark .glass-card {
-    @apply bg-surface-alt/80 border-border/30;
-  }
   .gradient-blue {
-    background: linear-gradient(135deg, #003DA5, #0050D4);
+    background: linear-gradient(135deg, #2F5593, #4472C4);
   }
-  .gradient-gold {
-    background: linear-gradient(135deg, #D4AF37, #E0C35A);
+  .gradient-accent {
+    background: linear-gradient(135deg, #0EA5E9, #38BDF8);
   }
   .gradient-hero {
-    background: linear-gradient(135deg, #003DA5 0%, #002D7A 50%, #001A4A 100%);
+    background: linear-gradient(135deg, #2F5593 0%, #1F4176 50%, #103060 100%);
   }
 }

@@ -58,14 +58,14 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#003DA5] to-[#002D7A] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-blue to-primary-blue-dark px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gold">
-            <span className="text-xl font-bold text-[#003DA5]">NN</span>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent">
+            <span className="text-xl font-bold text-primary-blue">NN</span>
           </div>
           <h1 className="text-display-lg text-white">Nyong Noni UNIMA</h1>
-          <p className="mt-1 text-gold-light">Panel Admin</p>
+          <p className="mt-1 text-accent-light">Panel Admin</p>
         </div>
 
         <div className="rounded-2xl bg-white p-8 shadow-xl">
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-[#003DA5] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#002D7A] disabled:opacity-50"
+              className="w-full rounded-full bg-primary-blue px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-blue-dark disabled:opacity-50"
             >
               {loading ? 'Memproses...' : 'Masuk'}
             </button>

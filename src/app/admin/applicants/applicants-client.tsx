@@ -110,7 +110,7 @@ export function ApplicantsClient({
     { label: 'Total', value: stats.total, color: 'text-primary' },
     { label: 'Pending', value: stats.pending, color: 'text-yellow-600' },
     { label: 'Terverifikasi', value: stats.verified, color: 'text-green-600' },
-    { label: 'Finalis', value: stats.finalist, color: 'text-gold' },
+    { label: 'Finalis', value: stats.finalist, color: 'text-accent' },
     { label: 'Ditolak', value: stats.rejected, color: 'text-red-600' },
   ]
 
@@ -188,12 +188,12 @@ export function ApplicantsClient({
                             className="appearance-none rounded-full border-0 bg-transparent px-3 py-1 text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                             style={{
                               backgroundColor:
-                                a.status === 'finalist' ? '#D4AF3720' :
+                                a.status === 'finalist' ? 'color-mix(in srgb, var(--color-accent) 15%, transparent)' :
                                 a.status === 'verified' ? '#16a34a20' :
                                 a.status === 'rejected' ? '#dc262620' :
                                 '#eab30820',
                               color:
-                                a.status === 'finalist' ? '#B8962E' :
+                                a.status === 'finalist' ? 'var(--color-accent-dark)' :
                                 a.status === 'verified' ? '#15803d' :
                                 a.status === 'rejected' ? '#b91c1c' :
                                 '#a16207',

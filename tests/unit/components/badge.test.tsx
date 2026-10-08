@@ -14,10 +14,10 @@ describe('Badge', () => {
     expect(badge.className).toContain('bg-primary')
   })
 
-  it('applies gold variant', () => {
-    render(<Badge variant="gold">Gold</Badge>)
-    const badge = screen.getByText('Gold')
-    expect(badge.className).toContain('bg-gold')
+  it('applies accent variant', () => {
+    render(<Badge variant="accent">Accent</Badge>)
+    const badge = screen.getByText('Accent')
+    expect(badge.className).toContain('bg-accent')
   })
 
   it('applies success variant', () => {

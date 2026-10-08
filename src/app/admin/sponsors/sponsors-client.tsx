@@ -10,8 +10,8 @@ import { Plus, Trash2, X, Search } from 'lucide-react'
 import { createSponsor, deleteSponsor } from '@/server/actions/unima'
 import { useRouter } from 'next/navigation'
 
-const TYPE_COLORS: Record<string, 'default' | 'gold' | 'success' | 'secondary'> = {
-  sponsor: 'gold',
+const TYPE_COLORS: Record<string, 'default' | 'accent' | 'success' | 'secondary'> = {
+  sponsor: 'accent',
   partner: 'success',
   media: 'secondary',
 }

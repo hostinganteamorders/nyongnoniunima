@@ -103,7 +103,7 @@ export function NewsClient({ news }: { news: any[] }) {
                     />
                   </div>
                 ) : (
-                  <div className="aspect-[16/9] flex items-center justify-center bg-gradient-to-br from-primary-blue/5 to-gold/5">
+                  <div className="aspect-[16/9] flex items-center justify-center bg-gradient-to-br from-primary-blue/5 to-accent/5">
                     <Newspaper className="h-12 w-12 text-primary-blue/20" />
                   </div>
                 )}

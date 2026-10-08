@@ -29,7 +29,7 @@ export function TitleholderCard({ item, showGelar, gelarShort }: TitleholderCard
             className="object-cover transition-transform duration-500 hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-blue/5 to-gold/5">
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-blue/5 to-accent/5">
             <span className="text-display-xl text-primary-blue/20 font-bold">
               {item.name?.charAt(0) || '?'}
             </span>

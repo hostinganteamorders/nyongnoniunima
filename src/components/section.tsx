@@ -4,13 +4,13 @@ interface SectionProps {
   children: ReactNode
   className?: string
   id?: string
-  variant?: 'default' | 'blue' | 'gold' | 'light'
+  variant?: 'default' | 'blue' | 'accent' | 'light'
 }
 
 const variantStyles: Record<string, string> = {
   default: 'bg-white',
   blue: 'bg-primary-blue text-white',
-  gold: 'bg-gold text-dark-text',
+  accent: 'bg-accent text-dark-text',
   light: 'bg-light-gray',
 }
 

@@ -291,7 +291,7 @@ export default function RegisterPage() {
                         Next <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
-                      <Button type="submit" variant="primary" disabled={submitting} className="bg-gold text-dark-text hover:bg-gold-light font-bold">
+                      <Button type="submit" variant="primary" disabled={submitting} className="bg-accent text-dark-text hover:bg-accent-light font-bold">
                         {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit Registration'}
                       </Button>
                     )}

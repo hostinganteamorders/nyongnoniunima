@@ -12,13 +12,13 @@ const CATEGORIES = [
 ] as const
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Grand Final': 'bg-gold text-white',
-  'Training Camp': 'bg-[#003DA5] text-white',
-  'Interview': 'bg-[#003DA5]/80 text-white',
+  'Grand Final': 'bg-accent text-white',
+  'Training Camp': 'bg-primary-blue text-white',
+  'Interview': 'bg-primary-blue/80 text-white',
   'Technical Meeting': 'bg-dark-secondary text-white',
-  'Open Registration': 'bg-green-600 text-white',
-  'Talent Show': 'bg-purple-600 text-white',
-  'Social Project': 'bg-orange-500 text-white',
+  'Open Registration': 'bg-primary-blue-light text-white',
+  'Talent Show': 'bg-accent-dark text-white',
+  'Social Project': 'bg-accent-light text-primary-blue-dark',
 }
 
 interface EventItem {
@@ -45,10 +45,10 @@ export default async function EventsPage() {
       {/* ─── HERO ─── */}
       <section className="gradient-hero relative flex flex-col items-center justify-center pt-[180px] pb-[96px] px-[20px] text-center">
         <div className="max-w-4xl mx-auto">
-          <p className="text-caption text-gold-light uppercase tracking-widest mb-4">Event & Kegiatan</p>
+          <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Event & Kegiatan</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
             Jadwal Acara <br />
-            <span className="text-gold">Nyong Noni UNIMA</span>
+            <span className="text-accent">Nyong Noni UNIMA</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
             Ikuti setiap kegiatan mulai dari pendaftaran, technical meeting, hingga malam puncak Grand Final.
@@ -117,14 +117,14 @@ export default async function EventsPage() {
                     </p>
                     <div className="mt-auto flex flex-wrap gap-4 text-body-sm text-dark-secondary border-t border-border pt-4">
                       <span className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-[#003DA5]" />
+                        <Clock className="h-4 w-4 text-primary-blue" />
                         {new Date(event.date).toLocaleTimeString('id-ID', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
                       </span>
                       <span className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-[#003DA5]" />
+                        <MapPin className="h-4 w-4 text-primary-blue" />
                         {event.location}
                       </span>
                     </div>

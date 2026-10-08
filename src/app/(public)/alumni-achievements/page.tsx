@@ -4,7 +4,7 @@ import { Trophy, Instagram, Briefcase, Building2 } from 'lucide-react'
 const ACHIEVEMENT_COLORS: Record<string, string> = {
   'ASN': 'bg-primary-blue/10 text-primary-blue',
   'Dokter': 'bg-green-500/20 text-green-700',
-  'Pengusaha': 'bg-gold/20 text-gold-dark',
+  'Pengusaha': 'bg-accent/20 text-accent-dark',
   'Influencer': 'bg-accent-magenta/20 text-accent-magenta',
   'Duta Nasional': 'bg-primary-blue/20 text-primary-blue',
 }
@@ -46,11 +46,11 @@ export default async function AlumniAchievementsPage({
         <div className="max-w-4xl mx-auto">
           <p className="text-caption text-dark-secondary uppercase tracking-widest mb-4">Alumni</p>
           <div className="flex items-center justify-center gap-4 mb-8 animate-fade-in">
-            <Trophy className="h-10 w-10 text-gold" />
+            <Trophy className="h-10 w-10 text-accent" />
             <h1 className="text-display-xl text-dark-text tracking-tighter">
               Prestasi
             </h1>
-            <Trophy className="h-10 w-10 text-gold" />
+            <Trophy className="h-10 w-10 text-accent" />
           </div>
           <p className="text-subhead text-dark-secondary max-w-2xl mx-auto">
             Alumni Nyong Noni Sulawesi Utara yang berhasil di berbagai bidang

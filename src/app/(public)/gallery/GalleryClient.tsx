@@ -1,18 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import { GalleryLightbox } from '@/components/gallery-lightbox'
-import { ImageIcon } from 'lucide-react'
-
-const CATEGORIES = [
-  'All',
-  'Auditions',
-  'Training Camp',
-  'Social Projects',
-  'Campus Promotion',
-  'Cultural Activities',
-  'Grand Final',
-]
 
 interface GalleryItem {
   id: string
@@ -21,6 +11,8 @@ interface GalleryItem {
   image_url: string
   category: string
   created_at?: string
+  width?: number | null
+  height?: number | null
 }
 
 interface GalleryClientProps {
@@ -42,6 +34,14 @@ export default function GalleryClient({ images }: GalleryClientProps) {
       }
     })
     return Array.from(set).sort((a, b) => Number(b) - Number(a))
+  }, [images])
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    images.forEach((img) => {
+      if (img.category) set.add(img.category)
+    })
+    return ['All', ...Array.from(set).sort((a, b) => a.localeCompare(b))]
   }, [images])
 
   const filteredImages = useMemo(() => {
@@ -68,10 +68,10 @@ export default function GalleryClient({ images }: GalleryClientProps) {
       {/* ─── HERO ─── */}
       <section className="gradient-hero relative flex flex-col items-center justify-center pt-[180px] pb-[96px] px-[20px] text-center">
         <div className="max-w-4xl mx-auto">
-          <p className="text-caption text-gold-light uppercase tracking-widest mb-4">Galeri</p>
+          <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Galeri</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
             Dokumentasi <br />
-            <span className="text-gold">Visual</span>
+            <span className="text-accent">Visual</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
             Momen-momen terbaik dari perjalanan Nyong Noni UNIMA
@@ -83,13 +83,13 @@ export default function GalleryClient({ images }: GalleryClientProps) {
       <section className="py-[60px] border-b border-border">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="flex flex-wrap gap-3 mb-6 justify-center">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveTab(cat)}
                 className={`px-5 py-2.5 rounded-full text-body-sm font-medium transition-all duration-200 ${
                   activeTab === cat
-                    ? 'bg-[#003DA5] text-white shadow-md'
+                    ? 'bg-primary-blue text-white shadow-md'
                     : 'bg-light-gray text-dark-secondary hover:bg-border'
                 }`}
               >
@@ -101,7 +101,7 @@ export default function GalleryClient({ images }: GalleryClientProps) {
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}
-              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-[#003DA5]/30"
+              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30"
             >
               <option value="all">Semua Tahun</option>
               {years.map((y) => (
@@ -136,9 +136,12 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                   onClick={() => openLightbox(i)}
                   className="break-inside-avoid group relative rounded-xl overflow-hidden bg-white interactive-hover active-scale border border-border shadow-sm w-full"
                 >
-                  <img
+                  <Image
                     src={img.image_url}
                     alt={img.title}
+                    width={img.width || 1600}
+                    height={img.height || 1067}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

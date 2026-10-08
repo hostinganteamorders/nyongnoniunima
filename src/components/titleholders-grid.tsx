@@ -4,17 +4,17 @@ import { GENDER_TITLES, isCombinedTitle } from '@/lib/titleholders'
 function ColumnHeader({ label, highlight }: { label: string; highlight?: boolean }) {
   return (
     <div className="flex items-center gap-3 mb-8">
-      <div className={`h-px flex-1 ${highlight ? 'bg-gold/30' : 'bg-hairline'}`} />
+      <div className={`h-px flex-1 ${highlight ? 'bg-accent/30' : 'bg-hairline'}`} />
       <span
         className={`text-[13px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full ${
           highlight
-            ? 'text-gold-dark bg-gold/10 border border-gold/20'
+            ? 'text-accent-dark bg-accent/10 border border-accent/20'
             : 'text-dark-secondary bg-white border border-border'
         }`}
       >
         {label}
       </span>
-      <div className={`h-px flex-1 ${highlight ? 'bg-gold/30' : 'bg-hairline'}`} />
+      <div className={`h-px flex-1 ${highlight ? 'bg-accent/30' : 'bg-hairline'}`} />
     </div>
   )
 }

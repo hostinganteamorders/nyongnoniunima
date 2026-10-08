@@ -23,32 +23,32 @@ export default async function HomePage() {
       {/* ─── HERO ─── */}
       <section className="relative overflow-hidden gradient-hero min-h-[90vh] flex items-center">
         <div className="absolute inset-0 bg-[url('/hero-pattern.svg')] opacity-10" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gold/5 to-transparent" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/5 to-transparent" />
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="max-w-3xl">
+          <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
             <Image
               src="/images/logo-nyong-noni-unima.png"
               alt="Logo Nyong Noni UNIMA"
-              width={120}
-              height={120}
-              className="w-28 h-28 sm:w-32 sm:h-32 object-contain mb-8"
+              width={720}
+              height={796}
+              className="w-40 sm:w-52 lg:w-60 h-auto mb-8 brightness-0 invert drop-shadow-lg"
               priority
             />
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-pill px-4 py-2 mb-6">
-              <span className="h-2 w-2 rounded-full bg-gold animate-pulse" />
-              <span className="text-gold text-sm font-semibold tracking-wide">Registration Open Now</span>
+              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+              <span className="text-accent text-sm font-semibold tracking-wide">Registration Open Now</span>
             </div>
             <h1 className="text-display-xxl text-white font-bold leading-tight mb-6">
               Nyong Noni UNIMA
               <br />
-              <span className="text-gold">Official Portal</span>
+              <span className="text-accent">Official Portal</span>
             </h1>
             <p className="text-body-lg text-white/80 max-w-2xl mb-10 leading-relaxed">
               The Official Platform of Nyong &amp; Noni Universitas Negeri Manado — Empowering Student Ambassadors in Leadership, Culture, Tourism, Culture Preservation, and Academic Excellence.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/register">
-                <Button variant="primary" size="lg" className="bg-gold text-dark-text hover:bg-gold-light border-none h-14 px-8 text-body font-bold">
+                <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-8 text-body font-bold">
                   Register Now
                 </Button>
               </Link>
@@ -72,7 +72,7 @@ export default async function HomePage() {
                 NYONG & NONI UNIMA 2025
               </span>
               <h2 className="text-display-xl text-dark-text mt-3">Current Titleholders</h2>
-              <div className="w-20 h-1 bg-gold mx-auto mt-4" />
+              <div className="w-20 h-1 bg-accent mx-auto mt-4" />
             </div>
 
             <TitleholdersGrid titleholders={currentTitleholders} />
@@ -91,7 +91,7 @@ export default async function HomePage() {
       {/* ─── COUNTDOWN ─── */}
       <section className="py-section bg-primary-blue">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-caption text-gold uppercase tracking-widest">Grand Final Countdown</span>
+          <span className="text-caption text-accent uppercase tracking-widest">Grand Final Countdown</span>
           <div className="mt-6">
             <Countdown targetDate="2026-12-15T19:00:00" />
           </div>
@@ -104,12 +104,12 @@ export default async function HomePage() {
           <div className="text-center mb-14">
             <span className="text-caption text-primary-blue font-semibold tracking-widest">EXPLORE</span>
             <h2 className="text-display-xl text-dark-text mt-3">Spotlight</h2>
-            <div className="w-20 h-1 bg-gold mx-auto mt-4" />
+            <div className="w-20 h-1 bg-accent mx-auto mt-4" />
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="group block relative overflow-hidden rounded-xxl bg-primary-blue p-8 min-h-[280px] flex flex-col justify-end transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <span className="inline-flex items-center gap-1.5 text-gold text-xs font-semibold uppercase tracking-widest mb-3 relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <span className="inline-flex items-center gap-1.5 text-accent text-xs font-semibold uppercase tracking-widest mb-3 relative">
                 <Clock className="h-3.5 w-3.5" /> Coming Soon
               </span>
               <h3 className="text-display-md text-white mb-2 relative">Finalists</h3>
@@ -119,15 +119,15 @@ export default async function HomePage() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary-blue/20 rounded-full -translate-y-1/2 translate-x-1/2" />
               <h3 className="text-display-md text-white mb-2 relative">Latest News</h3>
               <p className="text-body text-white/70 relative">Stay updated with the latest news and announcements from Nyong Noni UNIMA.</p>
-              <span className="inline-flex items-center gap-1 text-gold text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
+              <span className="inline-flex items-center gap-1 text-accent text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
                 Read News <ArrowRight className="h-4 w-4" />
               </span>
             </Link>
             <Link href="/events" className="group block relative overflow-hidden rounded-xxl bg-primary-blue-dark p-8 min-h-[280px] flex flex-col justify-end transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2" />
               <h3 className="text-display-md text-white mb-2 relative">Upcoming Events</h3>
               <p className="text-body text-white/70 relative">Check out the schedule of upcoming Nyong Noni UNIMA events and activities.</p>
-              <span className="inline-flex items-center gap-1 text-gold text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
+              <span className="inline-flex items-center gap-1 text-accent text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
                 View Events <ArrowRight className="h-4 w-4" />
               </span>
             </Link>
@@ -162,7 +162,7 @@ export default async function HomePage() {
             <div>
               <span className="text-caption text-primary-blue font-semibold tracking-widest">ABOUT</span>
               <h2 className="text-display-xl text-dark-text mt-3 mb-6">Nyong Noni UNIMA</h2>
-              <div className="w-20 h-1 bg-gold mb-6" />
+              <div className="w-20 h-1 bg-accent mb-6" />
               <p className="text-body-lg text-dark-secondary leading-relaxed mb-6">
                 Nyong Noni UNIMA is the official student ambassador organization of Universitas Negeri Manado. 
                 We develop students in leadership, culture, tourism promotion, public speaking, social impact, and academic excellence.
@@ -202,7 +202,7 @@ export default async function HomePage() {
             <div className="text-center mb-14">
               <span className="text-caption text-primary-blue font-semibold tracking-widest">UNIVERSITAS NEGERI MANADO</span>
               <h2 className="text-display-xl text-dark-text mt-3">Our Faculties</h2>
-              <div className="w-20 h-1 bg-gold mx-auto mt-4" />
+              <div className="w-20 h-1 bg-accent mx-auto mt-4" />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {faculties.map((f: any) => (
@@ -220,9 +220,9 @@ export default async function HomePage() {
       <section className="py-section bg-primary-blue">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-caption text-gold font-semibold tracking-widest">CAMPUS ACTIVITIES</span>
+            <span className="text-caption text-accent font-semibold tracking-widest">CAMPUS ACTIVITIES</span>
             <h2 className="text-display-xl text-white mt-3">Programs & Initiatives</h2>
-            <div className="w-20 h-1 bg-gold mx-auto mt-4" />
+            <div className="w-20 h-1 bg-accent mx-auto mt-4" />
           </div>
           <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5">
             {[
@@ -288,7 +288,7 @@ export default async function HomePage() {
             Register now and become the next student ambassador of Universitas Negeri Manado. Represent your faculty and showcase your talent.
           </p>
           <Link href="/register">
-            <Button variant="primary" size="lg" className="bg-gold text-dark-text hover:bg-gold-light border-none h-14 px-10 text-body font-bold">
+            <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-10 text-body font-bold">
               Register Now
             </Button>
           </Link>

@@ -11,8 +11,8 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 
 const ACHIEVEMENT_TYPES = ['ASN', 'Dokter', 'Pengusaha', 'Influencer', 'Duta Nasional']
-const ACHIEVEMENT_COLORS: Record<string, 'default' | 'gold' | 'success' | 'secondary'> = {
-  'ASN': 'default', 'Dokter': 'success', 'Pengusaha': 'gold', 'Influencer': 'secondary', 'Duta Nasional': 'default',
+const ACHIEVEMENT_COLORS: Record<string, 'default' | 'accent' | 'success' | 'secondary'> = {
+  'ASN': 'default', 'Dokter': 'success', 'Pengusaha': 'accent', 'Influencer': 'secondary', 'Duta Nasional': 'default',
 }
 
 export function AlumniAchievementsClient({ data }: { data: any[] }) {
@@ -83,7 +83,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
               {data.map((item: any) => (
                 <div key={item.id} className="flex items-center justify-between rounded-lg border border-border p-4">
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/10 to-gold/10 flex items-center justify-center font-bold text-primary">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center font-bold text-primary">
                       {item.alumni_name.charAt(0)}
                     </div>
                     <div>

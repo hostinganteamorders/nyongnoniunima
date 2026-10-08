@@ -38,11 +38,11 @@ export default async function HallOfFamePage({
         <div className="max-w-4xl mx-auto">
           <p className="text-caption text-dark-secondary uppercase tracking-widest mb-4">Pemenang</p>
           <div className="flex items-center justify-center gap-4 mb-8 animate-fade-in">
-            <Crown className="h-10 w-10 text-gold" />
+            <Crown className="h-10 w-10 text-accent" />
             <h1 className="text-display-xl text-dark-text tracking-tighter">
               Hall of Fame
             </h1>
-            <Crown className="h-10 w-10 text-gold" />
+            <Crown className="h-10 w-10 text-accent" />
           </div>
           <p className="text-subhead text-dark-secondary max-w-2xl mx-auto">
             Penghargaan khusus Nyong Noni UNIMA — para penerima penghargaan berbakat, favorit, dan prestasi terbaik
@@ -76,8 +76,8 @@ export default async function HallOfFamePage({
                 >
                   {/* Category badge */}
                   <div className="mb-4 flex items-center gap-2">
-                    <Award className="h-4 w-4 text-gold" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gold-dark bg-gold/10 px-3 py-1 rounded-full">
+                    <Award className="h-4 w-4 text-accent" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-accent-dark bg-accent/10 px-3 py-1 rounded-full">
                       {entry.category || 'Hall of Fame'}
                     </span>
                   </div>

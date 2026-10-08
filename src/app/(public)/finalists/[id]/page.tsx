@@ -33,11 +33,11 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
               {finalist.photo_url ? (
                 <img src={finalist.photo_url} alt={finalist.full_name} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-8xl font-bold text-[#003DA5]/20">{finalist.full_name?.charAt(0)}</span>
+                <span className="text-8xl font-bold text-primary-blue/20">{finalist.full_name?.charAt(0)}</span>
               )}
             </div>
             <CardContent className="p-6 text-center">
-              <Badge className="mb-2 bg-gold text-white border-0">
+              <Badge className="mb-2 bg-accent text-white border-0">
                 Finalis {finalist.profile?.tahun || new Date().getFullYear()}
               </Badge>
               <div className="flex justify-center gap-3 mt-4">
@@ -46,7 +46,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                     href={`https://instagram.com/${finalist.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-[#003DA5] hover:text-white transition-colors"
+                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-primary-blue hover:text-white transition-colors"
                   >
                     <Instagram className="h-4 w-4" />
                   </a>
@@ -56,7 +56,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                     href={`https://facebook.com/${finalist.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-[#003DA5] hover:text-white transition-colors"
+                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-primary-blue hover:text-white transition-colors"
                   >
                     <Facebook className="h-4 w-4" />
                   </a>
@@ -66,7 +66,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                     href={`https://tiktok.com/@${finalist.tiktok.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-[#003DA5] hover:text-white transition-colors"
+                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-primary-blue hover:text-white transition-colors"
                   >
                     <Music2 className="h-4 w-4" />
                   </a>
@@ -86,7 +86,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
             {finalist.profile?.bio && (
               <div className="bg-light-gray rounded-xl p-6 border border-border">
                 <div className="flex items-center gap-2 mb-3">
-                  <Heart className="h-4 w-4 text-[#003DA5]" />
+                  <Heart className="h-4 w-4 text-primary-blue" />
                   <h2 className="text-headline text-dark-text">Tentang</h2>
                 </div>
                 <p className="text-body text-dark-secondary leading-relaxed">{finalist.profile.bio}</p>
@@ -97,7 +97,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
             <div className="grid grid-cols-2 gap-4">
               {finalist.faculty && (
                 <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                  <GraduationCap className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                  <GraduationCap className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                   <div>
                     <p className="text-caption text-dark-secondary uppercase mb-1">Fakultas</p>
                     <p className="text-body-sm font-semibold text-dark-text">{finalist.faculty}</p>
@@ -108,7 +108,7 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                 </div>
               )}
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <MapPin className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <MapPin className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Asal</p>
                   <p className="text-body-sm font-semibold text-dark-text">{finalist.city}</p>
@@ -116,28 +116,28 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Cake className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <Cake className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Umur</p>
                   <p className="text-body-sm font-semibold text-dark-text">{finalist.umur} tahun</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Briefcase className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <Briefcase className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Pekerjaan</p>
                   <p className="text-body-sm font-semibold text-dark-text">{finalist.occupation}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Ruler className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <Ruler className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Tinggi</p>
                   <p className="text-body-sm font-semibold text-dark-text">{finalist.height_cm} cm</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Weight className="h-5 w-5 text-[#003DA5] mt-0.5 shrink-0" />
+                <Weight className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Berat</p>
                   <p className="text-body-sm font-semibold text-dark-text">{finalist.weight_kg} kg</p>
@@ -150,14 +150,14 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
               <h2 className="text-headline text-dark-text mb-4">Kontak</h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                  <Mail className="h-4 w-4 text-[#003DA5]" /> {finalist.email}
+                  <Mail className="h-4 w-4 text-primary-blue" /> {finalist.email}
                 </div>
                 <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                  <Phone className="h-4 w-4 text-[#003DA5]" /> {finalist.phone}
+                  <Phone className="h-4 w-4 text-primary-blue" /> {finalist.phone}
                 </div>
                 {finalist.instagram && (
                   <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                    <Instagram className="h-4 w-4 text-[#003DA5]" /> {finalist.instagram}
+                    <Instagram className="h-4 w-4 text-primary-blue" /> {finalist.instagram}
                   </div>
                 )}
               </div>

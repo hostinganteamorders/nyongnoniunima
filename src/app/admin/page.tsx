@@ -22,8 +22,8 @@ export default async function AdminDashboard() {
       icon: Users,
       href: '/admin/applicants',
       detail: `${stats.pending} pending · ${stats.verified} verified · ${stats.finalist} finalist`,
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-[#003DA5]',
+      iconBg: 'bg-primary-blue/10',
+      iconColor: 'text-primary-blue',
     },
     {
       label: 'Total Finalists',
@@ -31,8 +31,8 @@ export default async function AdminDashboard() {
       icon: UserCheck,
       href: '/admin/finalists',
       detail: `${stats.verified} verified applicants`,
-      iconBg: 'bg-gold/20',
-      iconColor: 'text-gold-dark',
+      iconBg: 'bg-accent/20',
+      iconColor: 'text-accent-dark',
     },
     {
       label: 'News',
@@ -40,8 +40,8 @@ export default async function AdminDashboard() {
       icon: Newspaper,
       href: '/admin/news',
       detail: 'Manage news articles',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
+      iconBg: 'bg-primary-blue-light/15',
+      iconColor: 'text-primary-blue-light',
     },
     {
       label: 'Events',
@@ -49,8 +49,8 @@ export default async function AdminDashboard() {
       icon: Calendar,
       href: '/admin/events',
       detail: 'Manage events',
-      iconBg: 'bg-purple-100',
-      iconColor: 'text-purple-600',
+      iconBg: 'bg-primary-blue-dark/15',
+      iconColor: 'text-primary-blue-dark',
     },
     {
       label: 'Alumni Achievements',
@@ -58,8 +58,8 @@ export default async function AdminDashboard() {
       icon: Award,
       href: '/admin/alumni-achievements',
       detail: 'Alumni accomplishments',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
+      iconBg: 'bg-accent-light/40',
+      iconColor: 'text-accent-dark',
     },
     {
       label: 'Titleholders',
@@ -67,16 +67,16 @@ export default async function AdminDashboard() {
       icon: Crown,
       href: '/admin/titleholders',
       detail: `${(titleholders as any[]).length} past · ${(currentTitleholders as any[]).length} current`,
-      iconBg: 'bg-pink-100',
-      iconColor: 'text-pink-600',
+      iconBg: 'bg-primary-blue/5',
+      iconColor: 'text-primary-blue',
     },
   ]
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-display-md text-[#1A1A1A]">Dashboard</h1>
-        <p className="mt-1 text-sm text-[#6B7280]">
+        <h1 className="text-display-md text-dark-text">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted">
           Welcome to the Nyong Noni UNIMA admin panel
         </p>
       </div>
@@ -86,15 +86,15 @@ export default async function AdminDashboard() {
           const Icon = card.icon
           return (
             <Link key={card.href} href={card.href}>
-              <div className="group cursor-pointer rounded-xl border border-[#E2E8F0] bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+              <div className="group cursor-pointer rounded-xl border border-border bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
                 <div className="mb-4 flex items-center justify-between">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${card.iconBg}`}>
                     <Icon className={`h-5 w-5 ${card.iconColor}`} />
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-[#1A1A1A]">{card.value}</div>
-                <div className="mt-1 text-sm font-medium text-[#1A1A1A]">{card.label}</div>
-                <p className="mt-0.5 text-xs text-[#6B7280]">{card.detail}</p>
+                <div className="text-3xl font-bold text-dark-text">{card.value}</div>
+                <div className="mt-1 text-sm font-medium text-dark-text">{card.label}</div>
+                <p className="mt-0.5 text-xs text-muted">{card.detail}</p>
               </div>
             </Link>
           )

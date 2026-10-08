@@ -73,7 +73,7 @@ export function Header() {
                 >
                   {item.label}
                   {isActive && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-4/5 bg-gold rounded-full" />
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-4/5 bg-accent rounded-full" />
                   )}
                 </Link>
               )
@@ -112,7 +112,7 @@ export function Header() {
                   className={cn(
                     'rounded-lg px-4 py-3.5 text-sm font-medium transition-colors',
                     isActive
-                      ? 'text-primary-blue bg-primary-blue/5 border-l-2 border-gold'
+                      ? 'text-primary-blue bg-primary-blue/5 border-l-2 border-accent'
                       : 'text-dark-text/70 hover:text-primary-blue hover:bg-light-gray',
                   )}
                   aria-current={isActive ? 'page' : undefined}

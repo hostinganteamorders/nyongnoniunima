@@ -104,7 +104,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map((item) => (
                 <div key={item.id} className="group relative rounded-lg overflow-hidden border border-border">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-gold/10 flex items-center justify-center">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
                     <span className="text-3xl">📸</span>
                   </div>
                   <div className="p-2">
@@ -161,7 +161,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div><Label>Judul</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-                <div><Label>URL Gambar</Label><Input required type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></div>
+                <div><Label>URL Gambar</Label><Input required value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
                 <div><Label>Kategori</Label><Input required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
                 <div><Label>Deskripsi</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
                 <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>

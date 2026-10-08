@@ -42,7 +42,7 @@ function TitleholderCard({ item, gender }: { item: any; gender: string }) {
 
       <div className="p-5">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-gold-dark bg-gold/10 px-2.5 py-1 rounded-full">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-accent-dark bg-accent/10 px-2.5 py-1 rounded-full">
             {item.category}
           </span>
           <span className="text-[10px] font-semibold uppercase tracking-widest text-dark-secondary">
@@ -131,9 +131,9 @@ export default async function TitleholdersPage({
         <div className="mx-auto max-w-4xl">
           <p className="mb-4 text-caption uppercase tracking-widest text-dark-secondary">Nyong &amp; Noni</p>
           <div className="mb-8 flex items-center justify-center gap-4 animate-fade-in">
-            <Crown className="h-10 w-10 text-gold" />
+            <Crown className="h-10 w-10 text-accent" />
             <h1 className="text-display-xl tracking-tighter text-dark-text">Titleholders</h1>
-            <Crown className="h-10 w-10 text-gold" />
+            <Crown className="h-10 w-10 text-accent" />
           </div>
           <p className="mx-auto max-w-2xl text-subhead text-dark-secondary">
             Para pemegang gelar Nyong dan Noni UNIMA. Setiap gelar adalah bentuk apresiasi bagi para duta yang mewakili daerahnya masing-masing.

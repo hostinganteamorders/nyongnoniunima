@@ -52,10 +52,10 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
       {/* ─── HERO ─── */}
       <section className="gradient-hero relative flex flex-col items-center justify-center pt-[180px] pb-[96px] px-[20px] text-center">
         <div className="max-w-4xl mx-auto">
-          <p className="text-caption text-gold-light uppercase tracking-widest mb-4">Finalis</p>
+          <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Finalis</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
             Para <br />
-            <span className="text-gold">Finalis</span>
+            <span className="text-accent">Finalis</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
             Mengenal lebih dekat para finalis Nyong Noni UNIMA {new Date().getFullYear()}
@@ -70,7 +70,7 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}
-              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-[#003DA5]/30"
+              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30"
             >
               <option value="all">Semua Tahun</option>
               {years.map((y) => (
@@ -80,7 +80,7 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
-              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-[#003DA5]/30"
+              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30"
             >
               <option value="all">Semua Gender</option>
               <option value="Laki-laki">Laki-laki</option>
@@ -90,8 +90,8 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
 
           {filtered.length === 0 ? (
             <div className="py-20 text-center max-w-xl mx-auto">
-              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#003DA5]/10">
-                <Clock className="h-7 w-7 text-[#003DA5]" />
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-blue/10">
+                <Clock className="h-7 w-7 text-primary-blue" />
               </div>
               <h2 className="text-display-md text-dark-text mb-3">Coming Soon</h2>
               <p className="text-body-lg text-dark-secondary leading-relaxed">
@@ -109,7 +109,7 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
                       ) : (
                         <span className="text-display-md text-dark-secondary font-bold">{f.full_name?.charAt(0)}</span>
                       )}
-                      <span className="absolute top-4 right-4 bg-[#003DA5] text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">
+                      <span className="absolute top-4 right-4 bg-primary-blue text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">
                         Finalis
                       </span>
                     </div>
@@ -118,13 +118,13 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
                       <div className="space-y-2 mt-auto">
                         {f.faculty && (
                           <div className="flex items-center gap-2 text-body-sm text-dark-secondary">
-                            <GraduationCap className="h-4 w-4 shrink-0 text-[#003DA5]" />
+                            <GraduationCap className="h-4 w-4 shrink-0 text-primary-blue" />
                             <span className="truncate">{f.faculty}</span>
                           </div>
                         )}
                         {f.study_program && (
                           <div className="flex items-center gap-2 text-body-sm text-dark-secondary">
-                            <MapPin className="h-4 w-4 shrink-0 text-[#003DA5]" />
+                            <MapPin className="h-4 w-4 shrink-0 text-primary-blue" />
                             <span className="truncate">{f.study_program}</span>
                           </div>
                         )}

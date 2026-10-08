@@ -179,7 +179,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Crown className="h-5 w-5 text-gold" />
+                <Crown className="h-5 w-5 text-accent" />
                 Finalis ({finalists.length})
               </CardTitle>
             </div>
@@ -190,7 +190,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
             ) : (
               <div className="space-y-3">
                 {filteredFinalists.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between rounded-lg border border-gold/30 bg-gold/5 p-3">
+                  <div key={f.id} className="flex items-center justify-between rounded-lg border border-accent/30 bg-accent/5 p-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         {f.photo_url && (
@@ -240,7 +240,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                       <p className="font-medium text-sm">{c.full_name}</p>
                       <p className="text-xs text-muted">{c.city} &middot; {c.height_cm} cm &middot; {c.occupation}</p>
                     </div>
-                    <Button variant="gold" size="sm" onClick={() => handlePromote(c.id)} disabled={loading === c.id}>
+                    <Button variant="accent" size="sm" onClick={() => handlePromote(c.id)} disabled={loading === c.id}>
                       <Crown className="h-3 w-3 mr-1" /> Jadikan Finalis
                     </Button>
                   </div>
