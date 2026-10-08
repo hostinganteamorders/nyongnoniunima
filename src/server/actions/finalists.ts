@@ -230,6 +230,39 @@ export async function uploadFinalistPhoto(formData: FormData) {
   return { url: publicUrl }
 }
 
+const TITLEHOLDER_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+}
+
+export async function uploadTitleholderPhoto(formData: FormData) {
+  await requireAdmin()
+  const file = formData.get('file') as File | null
+  if (!file) return { error: 'File tidak ditemukan' }
+  const ext = TITLEHOLDER_IMAGE_TYPES[file.type]
+  if (!ext) return { error: 'Hanya gambar JPG, PNG, WebP, atau AVIF yang diizinkan' }
+
+  if (isUsingLocalDb()) {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'titleholders')
+    await mkdir(uploadDir, { recursive: true })
+    const filename = `${crypto.randomUUID()}.${ext}`
+    await writeFile(path.join(uploadDir, filename), buffer)
+    return { url: `/uploads/titleholders/${filename}` }
+  }
+
+  const adminClient = getAdminClient()
+  const filename = `${crypto.randomUUID()}.${ext}`
+  const { error } = await adminClient.storage
+    .from('titleholders')
+    .upload(filename, file, { contentType: file.type })
+  if (error) return { error: error.message }
+  const { data: { publicUrl } } = adminClient.storage.from('titleholders').getPublicUrl(filename)
+  return { url: publicUrl }
+}
+
 // Admin: hall of fame CRUD
 export async function createHallOfFame(data: { tahun: number; nyong_name: string; noni_name: string; nyong_photo_url?: string; noni_photo_url?: string; kabupaten_kota: string }) {
   await requireAdmin()

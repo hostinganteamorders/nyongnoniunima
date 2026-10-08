@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Trash2, X, Search, LayoutGrid, List } from 'lucide-react'
-import { createGalleryItem, deleteGalleryItem } from '@/server/actions/content'
+import { Plus, Trash2, X, Search, LayoutGrid, List, Upload } from 'lucide-react'
+import { createGalleryItem, deleteGalleryItem, uploadGalleryPhoto } from '@/server/actions/content'
 import { useRouter } from 'next/navigation'
 
 interface GalleryItem {
@@ -24,6 +24,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ title: '', description: '', image_url: '', category: '' })
 
@@ -55,6 +56,26 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       setNotification({ type: 'error', message: 'Gagal menambahkan foto' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await uploadGalleryPhoto(fd)
+      if (res?.error) throw new Error(String(res.error))
+      setForm((prev) => ({ ...prev, image_url: res.url as string }))
+      setNotification({ type: 'success', message: 'Foto berhasil diunggah' })
+    } catch {
+      setNotification({ type: 'error', message: 'Gagal mengunggah foto' })
+    } finally {
+      setUploading(false)
+      input.value = ''
     }
   }
 
@@ -104,8 +125,13 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map((item) => (
                 <div key={item.id} className="group relative rounded-lg overflow-hidden border border-border">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-                    <span className="text-3xl">📸</span>
+                  <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center overflow-hidden">
+                    {item.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-3xl">📸</span>
+                    )}
                   </div>
                   <div className="p-2">
                     <p className="text-sm font-medium truncate">{item.title}</p>
@@ -161,7 +187,24 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div><Label>Judul</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-                <div><Label>URL Gambar</Label><Input required value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
+                <div>
+                  <Label>Unggah Foto</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} disabled={uploading} className="flex-1" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  </div>
+                  {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
+                </div>
+                <div>
+                  <Label>URL Gambar</Label>
+                  <Input required value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." />
+                  {form.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.image_url} alt="Pratinjau" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                  )}
+                </div>
                 <div><Label>Kategori</Label><Input required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
                 <div><Label>Deskripsi</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
                 <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>

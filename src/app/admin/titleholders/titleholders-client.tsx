@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Crown, Pencil, Plus, Trash2, X, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createTitleholder, updateTitleholder, deleteTitleholder } from '@/server/actions/finalists'
+import { createTitleholder, updateTitleholder, deleteTitleholder, uploadTitleholderPhoto } from '@/server/actions/finalists'
 
 const CATEGORIES = ['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'] as const
 
@@ -45,6 +45,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState<'nyong' | 'noni' | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
@@ -85,6 +86,26 @@ export function TitleholdersClient({ data }: { data: any[] }) {
     })
     setError('')
     setShowModal(true)
+  }
+
+  const handleFileChange = async (field: 'nyong' | 'noni', event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+    setUploading(field)
+    setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await uploadTitleholderPhoto(fd)
+      if (res?.error) throw new Error(String(res.error))
+      setForm((prev) => ({ ...prev, [`${field}_photo_url`]: res.url as string }))
+    } catch {
+      setError('Gagal mengunggah foto')
+    } finally {
+      setUploading(null)
+      input.value = ''
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -228,8 +249,36 @@ export function TitleholdersClient({ data }: { data: any[] }) {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Foto Nyong (URL)</Label><Input value={form.nyong_photo_url} onChange={(event) => setForm({ ...form, nyong_photo_url: event.target.value })} /></div>
-                <div><Label>Foto Noni (URL)</Label><Input value={form.noni_photo_url} onChange={(event) => setForm({ ...form, noni_photo_url: event.target.value })} /></div>
+                <div className="space-y-2">
+                  <Label>Foto Nyong</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(e) => handleFileChange('nyong', e)} disabled={uploading !== null} className="flex-1" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  </div>
+                  {uploading === 'nyong' && <p className="text-xs text-muted">Mengunggah...</p>}
+                  <Input value={form.nyong_photo_url} onChange={(event) => setForm({ ...form, nyong_photo_url: event.target.value })} placeholder="URL foto (opsional)" />
+                  {form.nyong_photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.nyong_photo_url} alt="Foto Nyong" className="h-28 w-full rounded-lg border border-border object-cover" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Foto Noni</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(e) => handleFileChange('noni', e)} disabled={uploading !== null} className="flex-1" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  </div>
+                  {uploading === 'noni' && <p className="text-xs text-muted">Mengunggah...</p>}
+                  <Input value={form.noni_photo_url} onChange={(event) => setForm({ ...form, noni_photo_url: event.target.value })} placeholder="URL foto (opsional)" />
+                  {form.noni_photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.noni_photo_url} alt="Foto Noni" className="h-28 w-full rounded-lg border border-border object-cover" />
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

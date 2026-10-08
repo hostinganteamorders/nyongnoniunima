@@ -4,6 +4,15 @@ import { requireAdmin, getAdminClient } from '@/lib/supabase/admin'
 import { newsSchema, eventSchema, gallerySchema } from '@/lib/validations/registration'
 import { revalidatePath } from 'next/cache'
 import { isUsingLocalDb, localInsert, localQuery, localDelete } from '@/lib/db/local'
+import { writeFile, mkdir } from 'fs/promises'
+import path from 'path'
+
+const IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+}
 
 export async function createNews(formData: FormData) {
   const { user } = await requireAdmin()
@@ -241,5 +250,31 @@ export async function getPublicGallery() {
 
   if (error) throw new Error(error.message)
   return data || []
+}
+
+export async function uploadGalleryPhoto(formData: FormData) {
+  await requireAdmin()
+  const file = formData.get('file') as File | null
+  if (!file) return { error: 'File tidak ditemukan' }
+  const ext = IMAGE_TYPES[file.type]
+  if (!ext) return { error: 'Hanya gambar JPG, PNG, WebP, atau AVIF yang diizinkan' }
+
+  if (isUsingLocalDb()) {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'gallery')
+    await mkdir(uploadDir, { recursive: true })
+    const filename = `${crypto.randomUUID()}.${ext}`
+    await writeFile(path.join(uploadDir, filename), buffer)
+    return { url: `/uploads/gallery/${filename}` }
+  }
+
+  const adminClient = getAdminClient()
+  const filename = `${crypto.randomUUID()}.${ext}`
+  const { error } = await adminClient.storage
+    .from('gallery')
+    .upload(filename, file, { contentType: file.type })
+  if (error) return { error: error.message }
+  const { data: { publicUrl } } = adminClient.storage.from('gallery').getPublicUrl(filename)
+  return { url: publicUrl }
 }
 
