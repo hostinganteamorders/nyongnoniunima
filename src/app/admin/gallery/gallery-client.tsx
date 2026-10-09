@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Trash2, X, Search, LayoutGrid, List, Upload } from 'lucide-react'
-import { createGalleryItem, deleteGalleryItem, uploadGalleryPhoto } from '@/server/actions/content'
+import { createGalleryItem, deleteGalleryItem } from '@/server/actions/content'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
 interface GalleryItem {
@@ -44,6 +45,11 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    if (!(await ensureAdminSession())) {
+      setNotification({ type: 'error', message: 'Silakan login terlebih dahulu' })
+      setLoading(false)
+      return
+    }
     try {
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => fd.append(k, v))
@@ -63,16 +69,18 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
     const input = e.target
     const file = input.files?.[0]
     if (!file) return
+    if (!(await ensureAdminSession())) {
+      setNotification({ type: 'error', message: 'Silakan login terlebih dahulu' })
+      input.value = ''
+      return
+    }
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await uploadGalleryPhoto(fd)
-      if (res?.error) throw new Error(String(res.error))
-      setForm((prev) => ({ ...prev, image_url: res.url as string }))
+      const { url } = await uploadToStorage('gallery', file)
+      setForm((prev) => ({ ...prev, image_url: url }))
       setNotification({ type: 'success', message: 'Foto berhasil diunggah' })
-    } catch {
-      setNotification({ type: 'error', message: 'Gagal mengunggah foto' })
+    } catch (err) {
+      setNotification({ type: 'error', message: err instanceof Error ? err.message : 'Gagal mengunggah foto' })
     } finally {
       setUploading(false)
       input.value = ''

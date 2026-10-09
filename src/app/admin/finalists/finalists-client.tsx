@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Search, Trash2, Crown, X, FileText, Instagram, Upload } from 'lucide-react'
 import { updateApplicantStatus, deleteApplicant } from '@/server/actions/applicants'
-import { updateFinalistData, uploadFinalistPhoto } from '@/server/actions/finalists'
+import { updateFinalistData } from '@/server/actions/finalists'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -126,14 +127,14 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.type !== 'image/png') { setError('Hanya file PNG yang diizinkan'); return }
+    if (!(await ensureAdminSession())) { setError('Silakan login terlebih dahulu'); return }
     setUploading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const result = await uploadFinalistPhoto(formData)
-      if (result.error) { setError(result.error) }
-      else if (result.url && editData) { setEditData({ ...editData, photo_url: result.url }) }
+      const { url } = await uploadToStorage('finalists', file)
+      if (editData) setEditData({ ...editData, photo_url: url })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
     } finally { setUploading(false) }
   }
 
@@ -142,6 +143,11 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
     if (!editData) return
     setLoading(editData.applicant_id)
     setError('')
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      setLoading(null)
+      return
+    }
     try {
       const data: Record<string, unknown> = { applicant_id: editData.applicant_id, tahun: editData.tahun }
       const fields: (keyof EditData)[] = [

@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createTitleholder, updateTitleholder, deleteTitleholder, uploadTitleholderPhoto } from '@/server/actions/finalists'
+import { createTitleholder, updateTitleholder, deleteTitleholder } from '@/server/actions/finalists'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 
 const CATEGORIES = ['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'] as const
 
@@ -92,16 +93,18 @@ export function TitleholdersClient({ data }: { data: any[] }) {
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      input.value = ''
+      return
+    }
     setUploading(field)
     setError('')
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await uploadTitleholderPhoto(fd)
-      if (res?.error) throw new Error(String(res.error))
-      setForm((prev) => ({ ...prev, [`${field}_photo_url`]: res.url as string }))
-    } catch {
-      setError('Gagal mengunggah foto')
+      const { url } = await uploadToStorage('titleholders', file)
+      setForm((prev) => ({ ...prev, [`${field}_photo_url`]: url }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
     } finally {
       setUploading(null)
       input.value = ''
@@ -111,6 +114,11 @@ export function TitleholdersClient({ data }: { data: any[] }) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
+
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      return
+    }
 
     const payload = {
       ...form,

@@ -48,12 +48,27 @@ test.describe('Admin', () => {
     const src = await preview.getAttribute('src')
     expect(src).toMatch(/^(\/images\/|https?:\/\/)/)
 
-    // Regresi: nilai path relatif tidak lagi memblokir submit native validation.
-    // Server menolak dengan Unauthorized (belum login) ATAU sukses — keduanya
-    // membuktikan form benar-benar terkirim (sebelumnya submit mati diam-diam).
+    // Regresi: nilai path relatif tidak lagi memblokir submit native validation,
+    // dan pesan kejujuran muncul untuk tamu (belum login).
     await page.getByRole('button', { name: /^simpan$/i }).click()
     await expect(
-      page.getByText(/gagal menyimpan data|data berhasil diperbarui/i),
+      page.getByText(/silakan login terlebih dahulu|gagal menyimpan data|data berhasil diperbarui/i),
     ).toBeVisible({ timeout: 10000 })
+  })
+
+  test('upload without login shows honest login message (regression)', async ({ page }) => {
+    await page.goto('/admin/current-titleholders')
+
+    const firstRow = page.locator('tbody tr').first()
+    await firstRow.locator('button').first().click()
+    await expect(page.getByRole('heading', { name: /edit titleholder/i })).toBeVisible()
+
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'uji-upload.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    })
+
+    await expect(page.getByText(/silakan login terlebih dahulu/i)).toBeVisible()
   })
 })

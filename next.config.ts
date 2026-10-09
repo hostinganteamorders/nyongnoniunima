@@ -20,6 +20,13 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/*': ['./data/**/*'],
   },
+  experimental: {
+    // Unggah foto (mode lokal / fallback server action) butuh body > 1MB default.
+    // Di Vercel ada batas keras 4.5MB — unggah besar memakai signed URL langsung
+    // ke Supabase Storage (lihat src/lib/uploads.ts), jadi tidak melewati fungsi ini.
+    serverActions: { bodySizeLimit: '10mb' },
+    middlewareClientMaxBodySize: '10mb',
+  },
 }
 
 export default nextConfig

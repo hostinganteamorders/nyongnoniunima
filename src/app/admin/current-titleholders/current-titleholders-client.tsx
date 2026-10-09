@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Pencil, Trash2, X, Crown, Upload } from 'lucide-react'
 import { createCurrentTitleholder, updateCurrentTitleholder, deleteCurrentTitleholder } from '@/server/actions/unima'
-import { uploadTitleholderPhoto } from '@/server/actions/finalists'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
 interface FormState {
@@ -83,16 +83,18 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
     const input = e.target
     const file = input.files?.[0]
     if (!file) return
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      input.value = ''
+      return
+    }
     setUploading(true)
     setError('')
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await uploadTitleholderPhoto(fd)
-      if (res?.error) throw new Error(String(res.error))
-      setForm((prev) => ({ ...prev, photo_url: res.url as string }))
-    } catch {
-      setError('Gagal mengunggah foto')
+      const { url } = await uploadToStorage('titleholders', file)
+      setForm((prev) => ({ ...prev, photo_url: url }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
     } finally {
       setUploading(false)
       input.value = ''
@@ -103,6 +105,12 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      setLoading(false)
+      return
+    }
 
     const payload = {
       ...form,
