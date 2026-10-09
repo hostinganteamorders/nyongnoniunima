@@ -148,7 +148,7 @@ export function NewsClient({ news }: { news: NewsItem[] }) {
                 <div><Label>Judul</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
                 <div><Label>Slug</Label><Input required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></div>
                 <div><Label>Ringkasan</Label><Input value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} /></div>
-                <div><Label>URL Gambar</Label><Input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></div>
+                <div><Label>URL Gambar</Label><Input type="text" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
                 <div><Label>Konten</Label><textarea required className="flex h-28 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} /></div>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} />

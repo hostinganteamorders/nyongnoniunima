@@ -177,7 +177,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div><Label>Nama</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                <div><Label>URL Logo</Label><Input type="url" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." /></div>
+                <div><Label>URL Logo</Label><Input type="text" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
                 <div><Label>Website</Label><Input type="url" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://..." /></div>
                 <div>
                   <Label>Tipe</Label>

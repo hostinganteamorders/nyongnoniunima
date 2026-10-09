@@ -23,6 +23,6 @@ test.describe('Home Page', () => {
     await page.goto('/')
     await page.getByRole('link', { name: /tentang/i }).first().click()
     await expect(page).toHaveURL(/\/about/)
-    await expect(page.getByRole('heading', { name: /nyong noni sulawesi utara/i }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: /tentang nyong noni/i }).first()).toBeVisible()
   })
 })

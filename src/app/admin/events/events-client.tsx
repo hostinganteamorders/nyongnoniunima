@@ -169,7 +169,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
                       ))}
                     </select>
                   </div>
-                  <div><Label>URL Gambar</Label><Input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></div>
+                  <div><Label>URL Gambar</Label><Input type="text" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} />

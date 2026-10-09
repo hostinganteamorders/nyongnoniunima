@@ -2,18 +2,33 @@ import { getApplicantStats } from '@/server/actions/applicants'
 import { getNews, getEvents } from '@/server/actions/content'
 import { getAlumniAchievements, getTitleholders } from '@/server/actions/finalists'
 import { getCurrentTitleholders } from '@/server/actions/unima'
+import { isAuthError } from '@/lib/admin-error'
+import { AdminLoginRequired } from '@/components/admin-login-required'
 import Link from 'next/link'
 import { Users, UserCheck, Newspaper, Calendar, Award, Crown } from 'lucide-react'
 
+async function loadDashboardData() {
+  try {
+    const [stats, news, events, alumni, titleholders, currentTitleholders] = await Promise.all([
+      getApplicantStats(),
+      getNews(),
+      getEvents(),
+      getAlumniAchievements().catch(() => []),
+      getTitleholders().catch(() => []),
+      getCurrentTitleholders().catch(() => []),
+    ])
+    return { stats, news, events, alumni, titleholders, currentTitleholders }
+  } catch (error) {
+    if (isAuthError(error)) return null
+    throw error
+  }
+}
+
 export default async function AdminDashboard() {
-  const [stats, news, events, alumni, titleholders, currentTitleholders] = await Promise.all([
-    getApplicantStats().catch(() => ({ total: 0, pending: 0, verified: 0, rejected: 0, finalist: 0 })),
-    getNews().catch(() => []),
-    getEvents().catch(() => []),
-    getAlumniAchievements().catch(() => []),
-    getTitleholders().catch(() => []),
-    getCurrentTitleholders().catch(() => []),
-  ])
+  const data = await loadDashboardData()
+  if (!data) return <AdminLoginRequired />
+
+  const { stats, news, events, alumni, titleholders, currentTitleholders } = data
 
   const cards = [
     {

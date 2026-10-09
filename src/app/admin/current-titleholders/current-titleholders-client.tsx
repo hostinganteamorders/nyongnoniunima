@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Pencil, Trash2, X, Crown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Crown, Upload } from 'lucide-react'
 import { createCurrentTitleholder, updateCurrentTitleholder, deleteCurrentTitleholder } from '@/server/actions/unima'
+import { uploadTitleholderPhoto } from '@/server/actions/finalists'
 import { useRouter } from 'next/navigation'
 
 interface FormState {
@@ -38,6 +39,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
@@ -75,6 +77,26 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
     })
     setError('')
     setShowModal(true)
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await uploadTitleholderPhoto(fd)
+      if (res?.error) throw new Error(String(res.error))
+      setForm((prev) => ({ ...prev, photo_url: res.url as string }))
+    } catch {
+      setError('Gagal mengunggah foto')
+    } finally {
+      setUploading(false)
+      input.value = ''
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,7 +219,24 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
                 </div>
                 <div><Label>Fakultas</Label><Input value={form.faculty} onChange={(e) => setForm({ ...form, faculty: e.target.value })} /></div>
                 <div><Label>Program Studi</Label><Input value={form.study_program} onChange={(e) => setForm({ ...form, study_program: e.target.value })} /></div>
-                <div><Label>URL Foto</Label><Input type="url" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://..." /></div>
+                <div>
+                  <Label>Unggah Foto</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} disabled={uploading} className="flex-1" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  </div>
+                  {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
+                </div>
+                <div>
+                  <Label>URL Foto</Label>
+                  <Input type="text" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="/images/... atau https://..." />
+                  {form.photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                  )}
+                </div>
                 <div><Label>Instagram</Label><Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@username" /></div>
                 <div><Label>Biografi</Label><textarea className="flex h-24 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" value={form.biography} onChange={(e) => setForm({ ...form, biography: e.target.value })} /></div>
                 <div><Label>Sort Order</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
