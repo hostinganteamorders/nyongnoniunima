@@ -3,17 +3,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 
-const milestones = [
-  { year: '2007', event: 'Nyong Noni didirikan sebagai ajang pemilihan duta muda' },
-  { year: '2014', event: 'Penyelenggaraan pertama Nyong Noni Sulawesi Utara' },
-  { year: '2016', event: 'Jangkauan diperluas ke seluruh kabupaten/kota se-Sulut' },
-  { year: '2018', event: 'Kerjasama dengan Dinas Pariwisata Provinsi Sulawesi Utara' },
-  { year: '2020', event: 'Platform digital dan pendaftaran online diperkenalkan' },
-  { year: '2022', event: 'Alumni berprestasi di tingkat nasional dan internasional' },
-  { year: '2024', event: 'Menjadi ajang duta wisata dan budaya terdepan di Sulawesi' },
-  { year: '2026', event: 'Nyong Noni UNIMA hadir sebagai wajah baru generasi muda kampus' },
-]
-
 const values = [
   {
     icon: Award,
@@ -211,24 +200,19 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ─── HISTORY TIMELINE ─── */}
+      {/* ─── HISTORY ─── */}
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-3xl px-[20px]">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10">
             <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Sejarah</p>
             <h2 className="text-display-lg text-dark-text">Perjalanan Sejarah</h2>
           </div>
-          <div className="relative pl-8 border-l-2 border-primary-blue/20 ml-4 md:ml-0">
-            <div className="space-y-12">
-              {milestones.map((m) => (
-                <div key={m.year} className="relative">
-                  <div className="absolute -left-[45px] top-1.5 w-5 h-5 rounded-full bg-primary-blue outline outline-4 outline-light-gray" />
-                  <span className="text-headline text-primary-blue block mb-2 font-bold">{m.year}</span>
-                  <p className="text-body-sm text-dark-secondary">{m.event}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <p className="text-body-lg text-dark-secondary leading-relaxed text-center">
+            Nyong Noni UNIMA didirikan pada tahun 2007 sebagai ajang pemilihan mahasiswa Universitas
+            Negeri Manado yang menampilkan prestasi, wawasan, dan keterampilan komunikasi mahasiswa.
+            Kini, Nyong Noni UNIMA memasuki edisi baru dengan format penyelenggaraan dan platform
+            digital yang lebih modern.
+          </p>
         </div>
       </section>
 
