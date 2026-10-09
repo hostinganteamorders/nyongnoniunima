@@ -266,7 +266,6 @@ export function TitleholdersClient({ data }: { data: any[] }) {
                     </span>
                   </div>
                   {uploading === 'nyong' && <p className="text-xs text-muted">Mengunggah...</p>}
-                  <Input value={form.nyong_photo_url} onChange={(event) => setForm({ ...form, nyong_photo_url: event.target.value })} placeholder="URL foto (opsional)" />
                   {form.nyong_photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.nyong_photo_url} alt="Foto Nyong" className="h-28 w-full rounded-lg border border-border object-cover" />
@@ -281,7 +280,6 @@ export function TitleholdersClient({ data }: { data: any[] }) {
                     </span>
                   </div>
                   {uploading === 'noni' && <p className="text-xs text-muted">Mengunggah...</p>}
-                  <Input value={form.noni_photo_url} onChange={(event) => setForm({ ...form, noni_photo_url: event.target.value })} placeholder="URL foto (opsional)" />
                   {form.noni_photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.noni_photo_url} alt="Foto Noni" className="h-28 w-full rounded-lg border border-border object-cover" />

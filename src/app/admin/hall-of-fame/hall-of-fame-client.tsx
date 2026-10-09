@@ -5,14 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X, Upload } from 'lucide-react'
 import { createHallOfFame, deleteHallOfFame } from '@/server/actions/finalists'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
 export function HallOfFameClient({ data }: { data: any[] }) {
   const router = useRouter()
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ tahun: '', nyong_name: '', noni_name: '', nyong_photo_url: '', noni_photo_url: '', kabupaten_kota: '' })
   const [error, setError] = useState('')
@@ -28,6 +30,11 @@ export function HallOfFameClient({ data }: { data: any[] }) {
     e.preventDefault()
     setError('')
     setLoading(true)
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      setLoading(false)
+      return
+    }
     try {
       const result = await createHallOfFame({ ...form, tahun: Number(form.tahun) } as any)
       if (result?.error) {
@@ -42,6 +49,28 @@ export function HallOfFameClient({ data }: { data: any[] }) {
       setNotification({ type: 'error', message: 'Gagal menambahkan data' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFileChange = async (field: 'nyong' | 'noni', e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    if (!(await ensureAdminSession())) {
+      setError('Silakan login terlebih dahulu')
+      input.value = ''
+      return
+    }
+    setUploading(field)
+    setError('')
+    try {
+      const { url } = await uploadToStorage('hall-of-fame', file)
+      setForm((prev) => ({ ...prev, [`${field}_photo_url`]: url }))
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Gagal mengunggah foto')
+    } finally {
+      setUploading(null)
+      input.value = ''
     }
   }
 
@@ -115,8 +144,34 @@ export function HallOfFameClient({ data }: { data: any[] }) {
                 </div>
                 <div><Label>Kabupaten/Kota</Label><Input required value={form.kabupaten_kota} onChange={(e) => setForm({ ...form, kabupaten_kota: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Foto Nyong (URL)</Label><Input value={form.nyong_photo_url} onChange={(e) => setForm({ ...form, nyong_photo_url: e.target.value })} /></div>
-                  <div><Label>Foto Noni (URL)</Label><Input value={form.noni_photo_url} onChange={(e) => setForm({ ...form, noni_photo_url: e.target.value })} /></div>
+                  <div>
+                    <Label>Foto Nyong</Label>
+                    <div className="flex items-center gap-2">
+                      <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(e) => handleFileChange('nyong', e)} disabled={uploading !== null} className="flex-1" />
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                        <Upload className="h-4 w-4" />
+                      </span>
+                    </div>
+                    {uploading === 'nyong' && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
+                    {form.nyong_photo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={form.nyong_photo_url} alt="Pratinjau Foto Nyong" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                    )}
+                  </div>
+                  <div>
+                    <Label>Foto Noni</Label>
+                    <div className="flex items-center gap-2">
+                      <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={(e) => handleFileChange('noni', e)} disabled={uploading !== null} className="flex-1" />
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                        <Upload className="h-4 w-4" />
+                      </span>
+                    </div>
+                    {uploading === 'noni' && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
+                    {form.noni_photo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={form.noni_photo_url} alt="Pratinjau Foto Noni" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                    )}
+                  </div>
                 </div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>

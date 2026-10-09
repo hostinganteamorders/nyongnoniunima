@@ -236,10 +236,6 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
                     </span>
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                </div>
-                <div>
-                  <Label>URL Foto</Label>
-                  <Input type="text" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="/images/... atau https://..." />
                   {form.photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />

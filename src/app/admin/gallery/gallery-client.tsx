@@ -50,6 +50,11 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       setLoading(false)
       return
     }
+    if (!form.image_url) {
+      setNotification({ type: 'error', message: 'Foto belum diunggah' })
+      setLoading(false)
+      return
+    }
     try {
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => fd.append(k, v))
@@ -204,10 +209,6 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                     </span>
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                </div>
-                <div>
-                  <Label>URL Gambar</Label>
-                  <Input required value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." />
                   {form.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.image_url} alt="Pratinjau" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />

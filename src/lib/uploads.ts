@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { createSignedUpload, type StorageBucket } from '@/server/actions/uploads'
-import { uploadTitleholderPhoto, uploadFinalistPhoto } from '@/server/actions/finalists'
-import { uploadGalleryPhoto } from '@/server/actions/content'
+import { createSignedUpload, uploadLocalImage, type StorageBucket } from '@/server/actions/uploads'
 
 export function isSupabaseMode(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -34,12 +32,7 @@ export async function uploadToStorage(bucket: StorageBucket, file: File): Promis
 
   const fd = new FormData()
   fd.append('file', file)
-  const res =
-    bucket === 'gallery'
-      ? await uploadGalleryPhoto(fd)
-      : bucket === 'finalists'
-        ? await uploadFinalistPhoto(fd)
-        : await uploadTitleholderPhoto(fd)
+  const res = await uploadLocalImage(fd, bucket)
   if (res && 'error' in res && res.error) throw new Error(String(res.error))
   if (!res || !('url' in res)) throw new Error('Gagal mengunggah foto')
   return { url: String(res.url) }

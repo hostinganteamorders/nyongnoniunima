@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, X, Search } from 'lucide-react'
+import { Plus, Trash2, X, Search, Upload } from 'lucide-react'
 import { createNews, deleteNews } from '@/server/actions/content'
+import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
 interface NewsItem {
@@ -26,6 +27,7 @@ export function NewsClient({ news }: { news: NewsItem[] }) {
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ title: '', slug: '', content: '', excerpt: '', image_url: '', published: false })
 
@@ -45,18 +47,46 @@ export function NewsClient({ news }: { news: NewsItem[] }) {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    if (!(await ensureAdminSession())) {
+      setNotification({ type: 'error', message: 'Silakan login terlebih dahulu' })
+      setLoading(false)
+      return
+    }
     try {
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
-      await createNews(fd)
+      const res = await createNews(fd)
+      if (res && 'error' in res && res.error) throw new Error(String(res.error))
       setNotification({ type: 'success', message: 'Berita berhasil ditambahkan' })
       setShowAdd(false)
       setForm({ title: '', slug: '', content: '', excerpt: '', image_url: '', published: false })
       router.refresh()
-    } catch {
-      setNotification({ type: 'error', message: 'Gagal menambahkan berita' })
+    } catch (err) {
+      setNotification({ type: 'error', message: err instanceof Error && err.message ? err.message : 'Gagal menambahkan berita' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
+    const file = input.files?.[0]
+    if (!file) return
+    if (!(await ensureAdminSession())) {
+      setNotification({ type: 'error', message: 'Silakan login terlebih dahulu' })
+      input.value = ''
+      return
+    }
+    setUploading(true)
+    try {
+      const { url } = await uploadToStorage('news', file)
+      setForm((prev) => ({ ...prev, image_url: url }))
+      setNotification({ type: 'success', message: 'Gambar berhasil diunggah' })
+    } catch (err) {
+      setNotification({ type: 'error', message: err instanceof Error && err.message ? err.message : 'Gagal mengunggah gambar' })
+    } finally {
+      setUploading(false)
+      input.value = ''
     }
   }
 
@@ -148,7 +178,20 @@ export function NewsClient({ news }: { news: NewsItem[] }) {
                 <div><Label>Judul</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
                 <div><Label>Slug</Label><Input required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></div>
                 <div><Label>Ringkasan</Label><Input value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} /></div>
-                <div><Label>URL Gambar</Label><Input type="text" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/images/... atau https://..." /></div>
+                <div>
+                  <Label>Unggah Gambar</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} disabled={uploading} className="flex-1" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  </div>
+                  {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
+                  {form.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.image_url} alt="Pratinjau" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                  )}
+                </div>
                 <div><Label>Konten</Label><textarea required className="flex h-28 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} /></div>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} />

@@ -28,7 +28,7 @@ test.describe('Admin', () => {
     await expect(page.getByText('Belum ada foto')).toHaveCount(0)
   })
 
-  test('current titleholder edit modal uses text URL field with upload (regression)', async ({ page }) => {
+  test('current titleholder edit modal uses upload only, no URL field (regression)', async ({ page }) => {
     await page.goto('/admin/current-titleholders')
     await expect(page.getByRole('heading', { name: /current titleholder|titleholder/i }).first()).toBeVisible()
 
@@ -37,10 +37,7 @@ test.describe('Admin', () => {
 
     await expect(page.getByRole('heading', { name: /edit titleholder/i })).toBeVisible()
 
-    const photoUrl = page.locator('input[placeholder="/images/... atau https://..."]')
-    await expect(photoUrl).toBeVisible()
-    await expect(photoUrl).toHaveAttribute('type', 'text')
-
+    await expect(page.locator('input[placeholder="/images/... atau https://..."]')).toHaveCount(0)
     await expect(page.locator('input[type="file"]')).toBeVisible()
 
     const preview = page.locator('img[alt="Pratinjau foto"]')
@@ -54,6 +51,11 @@ test.describe('Admin', () => {
     await expect(
       page.getByText(/silakan login terlebih dahulu|gagal menyimpan data|data berhasil diperbarui/i),
     ).toBeVisible({ timeout: 10000 })
+  })
+
+  test('news page is auth-gated (upload form only reachable logged in)', async ({ page }) => {
+    await page.goto('/admin/news')
+    await expect(page.getByRole('heading', { name: /silakan login/i })).toBeVisible()
   })
 
   test('upload without login shows honest login message (regression)', async ({ page }) => {
