@@ -268,7 +268,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
                   {uploading === 'nyong' && <p className="text-xs text-muted">Mengunggah...</p>}
                   {form.nyong_photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.nyong_photo_url} alt="Foto Nyong" className="h-28 w-full rounded-lg border border-border object-cover" />
+                    <img src={form.nyong_photo_url} alt="Foto Nyong" className="max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                   )}
                 </div>
                 <div className="space-y-2">
@@ -282,7 +282,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
                   {uploading === 'noni' && <p className="text-xs text-muted">Mengunggah...</p>}
                   {form.noni_photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.noni_photo_url} alt="Foto Noni" className="h-28 w-full rounded-lg border border-border object-cover" />
+                    <img src={form.noni_photo_url} alt="Foto Noni" className="max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                   )}
                 </div>
               </div>

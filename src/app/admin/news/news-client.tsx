@@ -189,7 +189,7 @@ export function NewsClient({ news }: { news: NewsItem[] }) {
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                   {form.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.image_url} alt="Pratinjau" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                    <img src={form.image_url} alt="Pratinjau" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                   )}
                 </div>
                 <div><Label>Konten</Label><textarea required className="flex h-28 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} /></div>

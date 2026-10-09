@@ -238,7 +238,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                   {form.photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                   )}
                 </div>
                 <div><Label>Instagram</Label><Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@username" /></div>

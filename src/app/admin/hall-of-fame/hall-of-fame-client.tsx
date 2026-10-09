@@ -155,7 +155,7 @@ export function HallOfFameClient({ data }: { data: any[] }) {
                     {uploading === 'nyong' && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                     {form.nyong_photo_url && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={form.nyong_photo_url} alt="Pratinjau Foto Nyong" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                      <img src={form.nyong_photo_url} alt="Pratinjau Foto Nyong" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                     )}
                   </div>
                   <div>
@@ -169,7 +169,7 @@ export function HallOfFameClient({ data }: { data: any[] }) {
                     {uploading === 'noni' && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                     {form.noni_photo_url && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={form.noni_photo_url} alt="Pratinjau Foto Noni" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                      <img src={form.noni_photo_url} alt="Pratinjau Foto Noni" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                     )}
                   </div>
                 </div>

@@ -165,7 +165,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                   {form.photo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 h-28 w-full rounded-lg border border-border object-cover" />
+                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
                   )}
                 </div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
