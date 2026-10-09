@@ -1,6 +1,6 @@
-# Nyong Noni Sulawesi Utara Official Portal
+# Nyong Noni UNIMA Official Portal
 
-Portal resmi pemilihan Nyong Noni Sulawesi Utara - ajang pemilihan duta wisata dan budaya.
+Portal resmi pemilihan Nyong Noni UNIMA - ajang pemilihan duta wisata dan budaya Universitas Negeri Manado.
 
 ## Tech Stack
 - Next.js 15 (App Router)

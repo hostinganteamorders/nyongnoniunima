@@ -16,7 +16,7 @@ export default async function NewsPage() {
             <span className="text-primary-blue">Berita</span>
           </h1>
           <p className="text-subhead text-dark-secondary max-w-2xl mx-auto">
-            Informasi dan perkembangan terbaru Nyong Noni Sulawesi Utara
+            Informasi dan perkembangan terbaru Nyong Noni UNIMA
           </p>
         </div>
       </section>
@@ -31,7 +31,7 @@ export default async function NewsPage() {
               </div>
               <h2 className="text-display-md text-dark-text mb-4">Belum Ada Berita</h2>
               <p className="text-body-lg text-dark-secondary leading-relaxed">
-                Pantau terus halaman ini untuk mendapatkan informasi terbaru seputar Nyong Noni Sulawesi Utara.
+                Pantau terus halaman ini untuk mendapatkan informasi terbaru seputar Nyong Noni UNIMA.
               </p>
             </div>
           ) : (

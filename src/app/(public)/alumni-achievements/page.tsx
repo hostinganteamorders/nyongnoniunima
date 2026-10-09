@@ -53,7 +53,7 @@ export default async function AlumniAchievementsPage({
             <Trophy className="h-10 w-10 text-accent" />
           </div>
           <p className="text-subhead text-dark-secondary max-w-2xl mx-auto">
-            Alumni Nyong Noni Sulawesi Utara yang berhasil di berbagai bidang
+            Alumni Nyong Noni UNIMA yang berhasil di berbagai bidang
           </p>
         </div>
       </section>

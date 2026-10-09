@@ -33,7 +33,7 @@ describe('createNews', () => {
     const fd = new FormData()
     fd.append('title', 'Grand Final 2026')
     fd.append('slug', 'grand-final-2026')
-    fd.append('content', 'Acara grand final Nyong Noni Sulawesi Utara 2026 akan diselenggarakan di Manado. Acara ini spektakuler.')
+    fd.append('content', 'Acara grand final Nyong Noni UNIMA 2026 akan diselenggarakan di Manado. Acara ini spektakuler.')
     fd.append('excerpt', 'Grand final akan digelar di Manado')
     fd.append('published', 'true')
 
@@ -102,7 +102,7 @@ describe('createEvent', () => {
     const fd = new FormData()
     fd.append('title', 'Grand Final 2026')
     fd.append('slug', 'grand-final-2026')
-    fd.append('description', 'Acara puncak Nyong Noni Sulawesi Utara 2026')
+    fd.append('description', 'Acara puncak Nyong Noni UNIMA 2026')
     fd.append('date', '2026-08-15')
     fd.append('location', 'Manado Convention Center')
     fd.append('published', 'true')

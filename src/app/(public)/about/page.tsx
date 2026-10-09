@@ -12,7 +12,7 @@ const values = [
   {
     icon: Globe,
     title: 'Budaya',
-    desc: 'Melestarikan dan mempromosikan kekayaan budaya Sulawesi Utara kepada dunia.',
+    desc: 'Program pemilihan duta wisata dan budaya Universitas Negeri Manado bagi mahasiswa berprestasi.',
   },
   {
     icon: MapPin,
@@ -72,7 +72,7 @@ export default function AboutPage() {
             <span className="text-accent">UNIMA</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
-            Ajang bergengsi pemilihan duta wisata dan budaya Universitas Negeri Manado yang melahirkan generasi muda terbaik Sulawesi Utara.
+            Ajang bergengsi pemilihan duta wisata dan budaya Universitas Negeri Manado yang melahirkan duta mahasiswa terbaik dari seluruh fakultas di UNIMA.
           </p>
         </div>
       </section>
@@ -136,7 +136,7 @@ export default function AboutPage() {
                 {[
                   'Menjaring generasi muda berbakat dari seluruh fakultas di UNIMA',
                   'Membentuk duta wisata yang berpengetahuan luas tentang budaya dan pariwisata daerah',
-                  'Mempromosikan keindahan alam, budaya, dan kuliner Sulawesi Utara',
+                  'Mempromosikan potensi Universitas Negeri Manado serta kebudayaan dan pariwisata daerah',
                   'Menciptakan generasi muda yang peduli terhadap pariwisata dan lingkungan kampus',
                   'Menjalin kerjasama dengan Dinas Pariwisata dan stakeholder terkait',
                 ].map((item, i) => (

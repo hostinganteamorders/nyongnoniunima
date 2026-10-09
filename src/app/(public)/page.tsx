@@ -173,7 +173,7 @@ export default async function HomePage() {
               </p>
               <p className="text-body text-dark-secondary mb-8">
                 Melalui berbagai program dan kegiatan, kami memberdayakan mahasiswa untuk menjadi duta teladan
-                yang mempromosikan kekayaan budaya dan potensi pariwisata Sulawesi Utara.
+                yang mempromosikan nama Universitas Negeri Manado beserta kekayaan budaya dan potensi pariwisata daerah.
               </p>
               <Link href="/about">
                 <Button variant="primary" className="bg-primary-blue text-white hover:bg-primary-blue-dark h-12 px-8">
