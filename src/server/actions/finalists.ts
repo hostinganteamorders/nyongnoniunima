@@ -43,6 +43,36 @@ function sortTitleholders<T extends { tahun: number; category: string; nyong_nam
   })
 }
 
+// Map applicants' faculty/study_program UUID ids to readable names (public pages render them as display text)
+async function resolveFacultyNames<T extends { faculty?: string | null; study_program?: string | null }>(rows: T[]): Promise<T[]> {
+  if (rows.length === 0) return rows
+  try {
+    let faculties: { id: string; name: string }[] = []
+    let programs: { id: string; name: string }[] = []
+    if (isUsingLocalDb()) {
+      faculties = localQuery<{ id: string; name: string }>('faculties', {}) || []
+      programs = localQuery<{ id: string; name: string }>('study_programs', {}) || []
+    } else {
+      const supabase = await createServerSupabaseClient()
+      const [f, p] = await Promise.all([
+        supabase.from('faculties').select('id, name'),
+        supabase.from('study_programs').select('id, name'),
+      ]) as [{ data: { id: string; name: string }[] | null }, { data: { id: string; name: string }[] | null }]
+      faculties = f.data || []
+      programs = p.data || []
+    }
+    const fmap = new Map(faculties.map((x) => [x.id, x.name]))
+    const pmap = new Map(programs.map((x) => [x.id, x.name]))
+    return rows.map((r) => ({
+      ...r,
+      faculty: r.faculty ? fmap.get(r.faculty) ?? r.faculty : r.faculty,
+      study_program: r.study_program ? pmap.get(r.study_program) ?? r.study_program : r.study_program,
+    }))
+  } catch {
+    return rows
+  }
+}
+
 // Public: get all finalists with profile info
 export async function getPublicFinalists() {
   if (isUsingLocalDb()) {
@@ -52,7 +82,7 @@ export async function getPublicFinalists() {
     }) || []
     const profiles: any[] = localQuery<any>('finalist_profiles', {}) || []
 
-    return applicants.map((a: any) => {
+    const rows = applicants.map((a: any) => {
       const profile = profiles.find((p: any) => p.applicant_id === a.id)
       return {
         ...a,
@@ -62,6 +92,7 @@ export async function getPublicFinalists() {
         umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null,
       }
     })
+    return resolveFacultyNames(rows)
   }
 
   const supabase = await createServerSupabaseClient()
@@ -76,11 +107,13 @@ export async function getPublicFinalists() {
     ? await supabase.from('finalist_profiles').select('*').in('applicant_id', ids) as any
     : { data: [] }
 
-  return (applicants || []).map((a: any) => ({
-    ...a,
-    profile: (profiles || []).find((p: any) => p.applicant_id === a.id) || null,
-    umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null,
-  }))
+  return resolveFacultyNames(
+    (applicants || []).map((a: any) => ({
+      ...a,
+      profile: (profiles || []).find((p: any) => p.applicant_id === a.id) || null,
+      umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null,
+    })),
+  )
 }
 
 // Public: get single finalist
@@ -91,7 +124,8 @@ export async function getPublicFinalist(id: string) {
     const a = applicants[0]
     const profiles = localQuery<any>('finalist_profiles', { where: { applicant_id: id } }) || []
     const profile = profiles[0] || null
-    return { ...a, umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null, photo_url: profile?.photo_url || a.photo_url || null, profile }
+    const [row] = await resolveFacultyNames([{ ...a, umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null, photo_url: profile?.photo_url || a.photo_url || null, profile }])
+    return row || null
   }
 
   const supabase = await createServerSupabaseClient()
@@ -99,7 +133,8 @@ export async function getPublicFinalist(id: string) {
   if (!applicant) return null
 
   const { data: profile } = await supabase.from('finalist_profiles').select('*').eq('applicant_id', id).single() as any
-  return { ...applicant, umur: calculateAge(applicant.date_of_birth), photo_url: profile?.photo_url || applicant.photo_url || null, profile: profile || null }
+  const [row] = await resolveFacultyNames([{ ...applicant, umur: calculateAge(applicant.date_of_birth), photo_url: profile?.photo_url || applicant.photo_url || null, profile: profile || null }])
+  return row || null
 }
 
 // Public: hall of fame
