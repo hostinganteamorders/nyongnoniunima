@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -74,6 +74,8 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, formState: { errors }, trigger, getValues, watch, setValue } = form
   const selectedFaculty = watch('faculty')
+  const stepRef = useRef(0)
+  stepRef.current = step
 
   useEffect(() => {
     if (selectedFaculty) {
@@ -186,7 +188,16 @@ export default function RegisterPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form
+              onSubmit={(e) => {
+                if (stepRef.current < STEPS.length - 1) {
+                  e.preventDefault()
+                  return
+                }
+                handleSubmit(onSubmit)(e)
+              }}
+              className="space-y-6"
+            >
               {/* Step 0: Personal & Academic Info */}
               {step === 0 && (
                 <div className="space-y-4 animate-fade-in">
@@ -311,7 +322,15 @@ export default function RegisterPage() {
                       <ChevronLeft className="mr-2 h-4 w-4" /> Sebelumnya
                     </Button>
                     {step < STEPS.length - 1 ? (
-                      <Button type="button" variant="primary" onClick={nextStep} className="bg-primary-blue text-white hover:bg-primary-blue-dark">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          nextStep()
+                        }}
+                        className="bg-primary-blue text-white hover:bg-primary-blue-dark"
+                      >
                         Selanjutnya <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
