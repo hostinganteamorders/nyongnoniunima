@@ -47,6 +47,23 @@ const FIELD_LABELS: Record<string, string> = {
   essay: 'Esai Motivasi',
 }
 
+const Input = ({ id, label, type = "text", placeholder, error, options, ...props }: any) => (
+  <div className="flex flex-col gap-1.5">
+    <label htmlFor={id} className="text-body-sm text-dark-text font-medium">{label}</label>
+    {options ? (
+      <select id={id} className={`w-full rounded-lg border ${error ? 'border-error' : 'border-border'} bg-white px-4 py-2.5 text-body text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30 focus:border-primary-blue`} {...props}>
+        <option value="">Pilih {label}</option>
+        {options.map((o: any) => (
+          <option key={o.id || o} value={o.id || o}>{o.name || o}</option>
+        ))}
+      </select>
+    ) : (
+      <input id={id} type={type} className={`w-full rounded-lg border ${error ? 'border-error' : 'border-border'} bg-white px-4 py-2.5 text-body text-dark-text placeholder:text-dark-secondary/40 focus:outline-none focus:ring-2 focus:ring-primary-blue/30 focus:border-primary-blue transition-all`} placeholder={placeholder} {...props} />
+    )}
+    {error && <span className="text-xs text-error">{error}</span>}
+  </div>
+)
+
 export default function RegisterPage() {
   const [step, setStep] = useState(0)
   const [faculties, setFaculties] = useState<Faculty[]>([])
@@ -124,23 +141,6 @@ export default function RegisterPage() {
     } catch { setSubmitError('Terjadi kesalahan. Silakan coba lagi.') }
     finally { setSubmitting(false) }
   }
-
-  const Input = ({ id, label, type = "text", placeholder, error, options, ...props }: any) => (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-body-sm text-dark-text font-medium">{label}</label>
-      {options ? (
-        <select id={id} className={`w-full rounded-lg border ${error ? 'border-error' : 'border-border'} bg-white px-4 py-2.5 text-body text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30 focus:border-primary-blue`} {...props}>
-          <option value="">Pilih {label}</option>
-          {options.map((o: any) => (
-            <option key={o.id || o} value={o.id || o}>{o.name || o}</option>
-          ))}
-        </select>
-      ) : (
-        <input id={id} type={type} className={`w-full rounded-lg border ${error ? 'border-error' : 'border-border'} bg-white px-4 py-2.5 text-body text-dark-text placeholder:text-dark-secondary/40 focus:outline-none focus:ring-2 focus:ring-primary-blue/30 focus:border-primary-blue transition-all`} placeholder={placeholder} {...props} />
-      )}
-      {error && <span className="text-xs text-error">{error}</span>}
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-light-gray pb-section">
