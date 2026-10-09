@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Search, Trash2, Crown, X, FileText, Instagram, Upload } from 'lucide-react'
-import { updateApplicantStatus, deleteApplicant } from '@/server/actions/applicants'
+import { Search, Crown, X, FileText, Instagram, Upload } from 'lucide-react'
+import { updateApplicantStatus } from '@/server/actions/applicants'
 import { updateFinalistData } from '@/server/actions/finalists'
 import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
@@ -93,12 +93,6 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
   const handleDemote = async (id: string) => {
     setLoading(id)
     try { await updateApplicantStatus(id, 'verified'); setNotification({ type: 'success', message: 'Status finalis dihapus' }); router.refresh() } catch { setNotification({ type: 'error', message: 'Gagal mengubah status' }) } finally { setLoading(null) }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus?')) return
-    setLoading(id)
-    try { await deleteApplicant(id); setNotification({ type: 'success', message: 'Data berhasil dihapus' }); router.refresh() } catch { setNotification({ type: 'error', message: 'Gagal menghapus data' }) } finally { setLoading(null) }
   }
 
   const openEdit = (a: Applicant) => {
@@ -213,9 +207,6 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleDemote(f.id)} disabled={loading === f.id}>
                         <X className="h-3 w-3 mr-1" /> Hapus
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-red-600" onClick={() => handleDelete(f.id)} disabled={loading === f.id}>
-                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
