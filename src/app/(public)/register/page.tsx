@@ -35,7 +35,7 @@ const FIELD_LABELS: Record<string, string> = {
   study_program: 'Program Studi',
   semester: 'Semester',
   address: 'Alamat',
-  city: 'Kota',
+  city: 'Kabupaten/Kota',
   province: 'Provinsi',
   height_cm: 'Tinggi Badan (cm)',
   weight_kg: 'Berat Badan (kg)',
@@ -241,7 +241,7 @@ export default function RegisterPage() {
                 <div className="space-y-4 animate-fade-in">
                   <Input id="address" label="Alamat" placeholder="Alamat lengkap" error={errors.address?.message} {...register('address')} />
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="city" label="Kota" placeholder="Kota" error={errors.city?.message} {...register('city')} />
+                    <Input id="city" label="Kabupaten/Kota" placeholder="Contoh: Manado" error={errors.city?.message} {...register('city')} />
                     <Input id="province" label="Provinsi" placeholder="Provinsi" error={errors.province?.message} {...register('province')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">

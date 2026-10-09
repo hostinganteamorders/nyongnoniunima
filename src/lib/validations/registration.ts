@@ -12,7 +12,7 @@ export const registrationSchema = z.object({
   study_program: z.string().min(1, 'Program studi harus dipilih'),
   semester: z.coerce.number().min(1, 'Semester minimal 1').max(14, 'Semester maksimal 14'),
   address: z.string().min(10, 'Alamat minimal 10 karakter'),
-  city: z.string().min(3, 'Kota harus diisi'),
+  city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
   province: z.string().min(3, 'Provinsi harus diisi'),
   height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
   weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
@@ -40,7 +40,7 @@ export const registrationStepSchema = [
   }),
   z.object({
     address: z.string().min(10, 'Alamat minimal 10 karakter'),
-    city: z.string().min(3, 'Kota harus diisi'),
+    city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
     province: z.string().min(3, 'Provinsi harus diisi'),
     height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
     weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
