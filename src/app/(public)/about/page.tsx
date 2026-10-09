@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 
 const milestones = [
+  { year: '2007', event: 'Nyong Noni didirikan sebagai ajang pemilihan duta muda' },
   { year: '2014', event: 'Penyelenggaraan pertama Nyong Noni Sulawesi Utara' },
   { year: '2016', event: 'Jangkauan diperluas ke seluruh kabupaten/kota se-Sulut' },
   { year: '2018', event: 'Kerjasama dengan Dinas Pariwisata Provinsi Sulawesi Utara' },
@@ -39,7 +40,7 @@ const values = [
 const selectionSteps = [
   { step: 1, title: 'Pendaftaran Online', desc: 'Calon finalis mendaftar melalui platform resmi dengan melengkapi data diri dan persyaratan.' },
   { step: 2, title: 'Seleksi Berkas', desc: 'Tim juri menyeleksi berkas pendaftaran untuk memilih kandidat yang memenuhi kriteria.' },
-  { step: 3, title: 'Technical Meeting', desc: 'Peserta terpilih mengikuti technical meeting untuk mendapatkan arahan teknis pelaksanaan.' },
+  { step: 3, title: 'Pertemuan Teknis', desc: 'Peserta terpilih mengikuti pertemuan teknis untuk mendapatkan arahan teknis pelaksanaan.' },
   { step: 4, title: 'Wawancara & Talent Show', desc: 'Kandidat menjalani wawancara mendalam dan menampilkan bakat di depan dewan juri.' },
   { step: 5, title: 'Masa Karantina', desc: 'Finalis mengikuti pembekalan, pelatihan, dan simulasi selama masa karantina intensif.' },
   { step: 6, title: 'Malam Grand Final', desc: 'Puncak acara pemilihan Nyong Noni UNIMA yang menampilkan seluruh finalis.' },
@@ -56,9 +57,9 @@ const annualTimeline = [
 
 const orgStructure = [
   { role: 'Dewan Pembina', desc: 'Rektor dan Wakil Rektor Universitas' },
-  { role: 'Steering Committee', desc: 'Kepala Dinas Pariwisata & Akademisi' },
+  { role: 'Panitia Pengarah', desc: 'Kepala Dinas Pariwisata & Akademisi' },
   { role: 'Panitia Pelaksana', desc: 'Mahasiswa aktif UNIMA' },
-  { role: 'Dewan Juri', desc: 'Profesional di bidang pariwisata, budaya, dan entertainment' },
+  { role: 'Dewan Juri', desc: 'Profesional di bidang pariwisata, budaya, dan hiburan' },
   { role: 'Mentor & Pelatih', desc: 'Alumni dan praktisi berpengalaman' },
 ]
 
@@ -78,7 +79,7 @@ export default function AboutPage() {
           />
           <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Tentang</p>
           <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
-            About Nyong Noni <br />
+            Tentang Nyong Noni <br />
             <span className="text-accent">UNIMA</span>
           </h1>
           <p className="text-subhead text-white/80 max-w-2xl mx-auto">
@@ -102,8 +103,8 @@ export default function AboutPage() {
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Nilai Inti</p>
-            <h2 className="text-display-lg text-dark-text">Core Values</h2>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Nilai</p>
+            <h2 className="text-display-lg text-dark-text">Nilai Inti</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {values.map((v) => {
@@ -165,8 +166,8 @@ export default function AboutPage() {
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
-            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Struktur</p>
-            <h2 className="text-display-lg text-dark-text">Organizational Structure</h2>
+            <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Organisasi</p>
+            <h2 className="text-display-lg text-dark-text">Struktur Organisasi</h2>
           </div>
           <div className="flex flex-col items-center">
             {/* Top - Pembina */}
@@ -194,7 +195,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-[20px]">
           <div className="text-center mb-16">
             <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Tahapan</p>
-            <h2 className="text-display-lg text-dark-text">Selection Process</h2>
+            <h2 className="text-display-lg text-dark-text">Proses Pemilihan</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {selectionSteps.map((s) => (
@@ -236,7 +237,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-4xl px-[20px]">
           <div className="text-center mb-16">
             <p className="text-caption text-primary-blue uppercase tracking-widest mb-2">Kalender</p>
-            <h2 className="text-display-lg text-dark-text">Annual Timeline</h2>
+            <h2 className="text-display-lg text-dark-text">Jadwal Tahunan</h2>
             <p className="text-body text-dark-secondary mt-2">Rangkaian kegiatan tahunan Nyong Noni UNIMA</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

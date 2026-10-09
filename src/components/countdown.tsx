@@ -36,10 +36,10 @@ export function Countdown({ targetDate, className = '' }: CountdownProps) {
   if (!timeLeft) return null
 
   const items = [
-    { value: timeLeft.days, label: 'Days' },
-    { value: timeLeft.hours, label: 'Hours' },
-    { value: timeLeft.minutes, label: 'Minutes' },
-    { value: timeLeft.seconds, label: 'Seconds' },
+    { value: timeLeft.days, label: 'Hari' },
+    { value: timeLeft.hours, label: 'Jam' },
+    { value: timeLeft.minutes, label: 'Menit' },
+    { value: timeLeft.seconds, label: 'Detik' },
   ]
 
   return (

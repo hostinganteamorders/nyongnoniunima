@@ -5,7 +5,7 @@ import { Footer } from '@/components/footer'
 describe('Footer', () => {
   it('renders brand section', () => {
     render(<Footer />)
-    expect(screen.getByText('Nyong Noni')).toBeInTheDocument()
+    expect(screen.getByAltText('Logo Nyong Noni UNIMA')).toBeInTheDocument()
     expect(screen.getByText(/Wadah pengembangan mahasiswa/i)).toBeInTheDocument()
   })
 
@@ -43,7 +43,8 @@ describe('Footer', () => {
     render(<Footer />)
     const tentangLinks = screen.getAllByText('Tentang')
     expect(tentangLinks.length).toBeGreaterThan(1)
-    const unimaBrands = screen.getAllByText('UNIMA')
-    expect(unimaBrands.length).toBeGreaterThan(1)
+    const unimaLinks = screen.getAllByText('UNIMA')
+    expect(unimaLinks.length).toBeGreaterThan(0)
+    expect(unimaLinks.some((el) => (el.closest('a') as HTMLAnchorElement | null)?.href.includes('unima.ac.id'))).toBe(true)
   })
 })

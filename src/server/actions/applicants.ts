@@ -1,7 +1,7 @@
 'use server'
 
 import { requireAdmin } from '@/lib/supabase/admin'
-import { registrationSchema } from '@/lib/validations/registration'
+import { registrationSchema, type RegistrationInput } from '@/lib/validations/registration'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isUsingLocalDb, localInsert, localQuery, localUpdate, localDelete } from '@/lib/db/local'
@@ -119,20 +119,7 @@ export async function deleteApplicant(id: string) {
   revalidatePath('/admin/applicants')
 }
 
-export async function createApplicant(data: {
-  full_name: string
-  email: string
-  phone: string
-  date_of_birth: string
-  address: string
-  city: string
-  province: string
-  height_cm: number
-  weight_kg: number
-  occupation: string
-  education: string
-  status?: string
-}) {
+export async function createApplicant(data: RegistrationInput & { status?: string }) {
   await requireAdmin()
   const parsed = registrationSchema.safeParse(data)
   if (!parsed.success) {

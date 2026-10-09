@@ -23,6 +23,30 @@ const STEPS = [
   { title: 'Konfirmasi', description: 'Review data' },
 ]
 
+const FIELD_LABELS: Record<string, string> = {
+  full_name: 'Nama Lengkap',
+  email: 'Email',
+  phone: 'Nomor Telepon',
+  date_of_birth: 'Tanggal Lahir',
+  place_of_birth: 'Tempat Lahir',
+  gender: 'Jenis Kelamin',
+  nim: 'NIM',
+  faculty: 'Fakultas',
+  study_program: 'Program Studi',
+  semester: 'Semester',
+  address: 'Alamat',
+  city: 'Kota',
+  province: 'Provinsi',
+  height_cm: 'Tinggi Badan (cm)',
+  weight_kg: 'Berat Badan (kg)',
+  occupation: 'Pekerjaan',
+  education: 'Pendidikan Terakhir',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  facebook: 'Facebook',
+  essay: 'Esai Motivasi',
+}
+
 export default function RegisterPage() {
   const [step, setStep] = useState(0)
   const [faculties, setFaculties] = useState<Faculty[]>([])
@@ -122,9 +146,9 @@ export default function RegisterPage() {
       <section className="gradient-hero relative overflow-hidden pt-24 pb-16 px-4 text-center">
         <div className="absolute inset-0 bg-[url('/hero-pattern.svg')] opacity-5" />
         <div className="relative z-10 max-w-4xl mx-auto">
-          <h1 className="text-display-xl text-white font-bold mb-4">Registration</h1>
+          <h1 className="text-display-xl text-white font-bold mb-4">Pendaftaran</h1>
           <p className="text-body-lg text-white/80 max-w-2xl mx-auto">
-            Register yourself to become the next Nyong Noni UNIMA student ambassador.
+            Daftarkan dirimu untuk menjadi duta mahasiswa Nyong Noni UNIMA berikutnya.
           </p>
         </div>
       </section>
@@ -167,24 +191,24 @@ export default function RegisterPage() {
               {step === 0 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="full_name" label="Full Name" placeholder="Your full name" error={errors.full_name?.message} {...register('full_name')} />
+                    <Input id="full_name" label="Nama Lengkap" placeholder="Nama lengkap kamu" error={errors.full_name?.message} {...register('full_name')} />
                     <Input id="email" type="email" label="Email" placeholder="email@unima.ac.id" error={errors.email?.message} {...register('email')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="phone" label="Phone Number" placeholder="08xxxxxxxxxx" error={errors.phone?.message} {...register('phone')} />
-                    <Input id="nim" label="NIM (Student ID)" placeholder="20xxxxxx" error={errors.nim?.message} {...register('nim')} />
+                    <Input id="phone" label="Nomor Telepon" placeholder="08xxxxxxxxxx" error={errors.phone?.message} {...register('phone')} />
+                    <Input id="nim" label="NIM (Nomor Induk Mahasiswa)" placeholder="20xxxxxx" error={errors.nim?.message} {...register('nim')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="place_of_birth" label="Place of Birth" placeholder="City of birth" error={errors.place_of_birth?.message} {...register('place_of_birth')} />
-                    <Input id="date_of_birth" type="date" label="Date of Birth" error={errors.date_of_birth?.message} {...register('date_of_birth')} />
+                    <Input id="place_of_birth" label="Tempat Lahir" placeholder="Kota kelahiran" error={errors.place_of_birth?.message} {...register('place_of_birth')} />
+                    <Input id="date_of_birth" type="date" label="Tanggal Lahir" error={errors.date_of_birth?.message} {...register('date_of_birth')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="gender" label="Gender" options={[{ id: 'Laki-laki', name: 'Male' }, { id: 'Perempuan', name: 'Female' }]} error={errors.gender?.message} {...register('gender')} />
+                    <Input id="gender" label="Jenis Kelamin" options={[{ id: 'Laki-laki', name: 'Laki-laki' }, { id: 'Perempuan', name: 'Perempuan' }]} error={errors.gender?.message} {...register('gender')} />
                     <Input id="semester" type="number" label="Semester" placeholder="1-14" error={errors.semester?.message} {...register('semester')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="faculty" label="Faculty" options={faculties.map((f: any) => ({ id: f.id, name: f.name }))} error={errors.faculty?.message} {...register('faculty', { onChange: () => { setValue('study_program', ''); setFilteredPrograms(studyPrograms.filter((sp: any) => sp.faculty_id === watch('faculty'))) } })} />
-                    <Input id="study_program" label="Study Program" options={filteredPrograms.map((sp: any) => ({ id: sp.id, name: sp.name }))} error={errors.study_program?.message} {...register('study_program')} />
+                    <Input id="faculty" label="Fakultas" options={faculties.map((f: any) => ({ id: f.id, name: f.name }))} error={errors.faculty?.message} {...register('faculty', { onChange: () => { setValue('study_program', ''); setFilteredPrograms(studyPrograms.filter((sp: any) => sp.faculty_id === watch('faculty'))) } })} />
+                    <Input id="study_program" label="Program Studi" options={filteredPrograms.map((sp: any) => ({ id: sp.id, name: sp.name }))} error={errors.study_program?.message} {...register('study_program')} />
                   </div>
                 </div>
               )}
@@ -192,18 +216,18 @@ export default function RegisterPage() {
               {/* Step 1: Address & Physical */}
               {step === 1 && (
                 <div className="space-y-4 animate-fade-in">
-                  <Input id="address" label="Address" placeholder="Your complete address" error={errors.address?.message} {...register('address')} />
+                  <Input id="address" label="Alamat" placeholder="Alamat lengkap" error={errors.address?.message} {...register('address')} />
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="city" label="City" placeholder="City" error={errors.city?.message} {...register('city')} />
-                    <Input id="province" label="Province" placeholder="Province" error={errors.province?.message} {...register('province')} />
+                    <Input id="city" label="Kota" placeholder="Kota" error={errors.city?.message} {...register('city')} />
+                    <Input id="province" label="Provinsi" placeholder="Provinsi" error={errors.province?.message} {...register('province')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="height_cm" type="number" label="Height (cm)" placeholder="170" error={errors.height_cm?.message} {...register('height_cm')} />
-                    <Input id="weight_kg" type="number" label="Weight (kg)" placeholder="60" error={errors.weight_kg?.message} {...register('weight_kg')} />
+                    <Input id="height_cm" type="number" label="Tinggi Badan (cm)" placeholder="170" error={errors.height_cm?.message} {...register('height_cm')} />
+                    <Input id="weight_kg" type="number" label="Berat Badan (kg)" placeholder="60" error={errors.weight_kg?.message} {...register('weight_kg')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="occupation" label="Occupation" placeholder="Student / etc" error={errors.occupation?.message} {...register('occupation')} />
-                    <Input id="education" label="Latest Education" placeholder="SMA/S1/S2" error={errors.education?.message} {...register('education')} />
+                    <Input id="occupation" label="Pekerjaan" placeholder="Mahasiswa / dll" error={errors.occupation?.message} {...register('occupation')} />
+                    <Input id="education" label="Pendidikan Terakhir" placeholder="SMA/S1/S2" error={errors.education?.message} {...register('education')} />
                   </div>
                 </div>
               )}
@@ -214,17 +238,17 @@ export default function RegisterPage() {
                   <div className="grid md:grid-cols-3 gap-4">
                     <Input id="instagram" label="Instagram" placeholder="@username" {...register('instagram')} />
                     <Input id="tiktok" label="TikTok" placeholder="@username" {...register('tiktok')} />
-                    <Input id="facebook" label="Facebook" placeholder="Profile URL" {...register('facebook')} />
+                    <Input id="facebook" label="Facebook" placeholder="URL Profil" {...register('facebook')} />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="essay" className="text-body-sm text-dark-text font-medium">
-                      Motivation Essay
+                      Esai Motivasi
                     </label>
                     <textarea
                       id="essay"
                       rows={6}
                       className={`w-full rounded-lg border ${errors.essay ? 'border-error' : 'border-border'} bg-white px-4 py-3 text-body text-dark-text placeholder:text-dark-secondary/40 focus:outline-none focus:ring-2 focus:ring-primary-blue/30 focus:border-primary-blue transition-all resize-y`}
-                      placeholder="Why do you want to join Nyong Noni UNIMA? Tell us your motivation, goals, and what makes you unique..."
+                      placeholder="Mengapa kamu ingin bergabung dengan Nyong Noni UNIMA? Ceritakan motivasi, tujuanmu, dan hal yang membuatmu unik..."
                       {...register('essay')}
                     />
                     {errors.essay && <span className="text-xs text-error">{errors.essay.message}</span>}
@@ -237,7 +261,7 @@ export default function RegisterPage() {
                       {...register('consent')}
                     />
                     <label htmlFor="consent" className="text-body-sm text-dark-secondary">
-                      I hereby confirm that all information provided is true and accurate. I agree to the terms and conditions of Nyong Noni UNIMA selection process.
+                      Saya menyatakan bahwa seluruh informasi yang saya berikan adalah benar dan akurat. Saya menyetujui syarat dan ketentuan proses pemilihan Nyong Noni UNIMA.
                       {errors.consent && <span className="block text-xs text-error mt-1">{errors.consent.message}</span>}
                     </label>
                   </div>
@@ -250,7 +274,7 @@ export default function RegisterPage() {
                   <div className="rounded-xl border border-border bg-light-gray p-6 space-y-3">
                     {Object.entries(getValues()).filter(([k]) => k !== 'consent').map(([key, value]) => (
                       <div key={key} className="flex justify-between border-b border-border pb-2 last:border-0 last:pb-0">
-                        <span className="text-dark-secondary text-sm capitalize">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-dark-secondary text-sm">{FIELD_LABELS[key] || key.replace(/_/g, ' ')}</span>
                         <span className="font-semibold text-dark-text text-sm text-right max-w-[60%]">{value?.toString() || '-'}</span>
                       </div>
                     ))}
@@ -264,9 +288,9 @@ export default function RegisterPage() {
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 border border-success/20">
                     <Check className="h-8 w-8 text-success" />
                   </div>
-                  <h3 className="text-display-md text-dark-text">Registration Successful</h3>
+                  <h3 className="text-display-md text-dark-text">Pendaftaran Berhasil</h3>
                   <p className="text-body text-dark-secondary max-w-lg mx-auto">
-                    Thank you for registering! Your data has been received and will be processed. We will contact you via email for further information.
+                    Terima kasih telah mendaftar! Data kamu telah diterima dan akan diproses. Kami akan menghubungi melalui email untuk informasi lebih lanjut.
                   </p>
                 </div>
               )}
@@ -278,21 +302,21 @@ export default function RegisterPage() {
                 {step === STEPS.length ? (
                   <div className="w-full text-center">
                     <Link href="/" className="text-body-sm font-semibold text-primary-blue hover:text-primary-blue-dark transition-colors">
-                      Back to Homepage
+                      Kembali ke Beranda
                     </Link>
                   </div>
                 ) : (
                   <>
                     <Button type="button" variant="ghost" onClick={prevStep} disabled={step === 0} className="text-dark-secondary border border-border">
-                      <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                      <ChevronLeft className="mr-2 h-4 w-4" /> Sebelumnya
                     </Button>
                     {step < STEPS.length - 1 ? (
                       <Button type="button" variant="primary" onClick={nextStep} className="bg-primary-blue text-white hover:bg-primary-blue-dark">
-                        Next <ChevronRight className="ml-2 h-4 w-4" />
+                        Selanjutnya <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
                       <Button type="submit" variant="primary" disabled={submitting} className="bg-accent text-dark-text hover:bg-accent-light font-bold">
-                        {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit Registration'}
+                        {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mengirim...</> : 'Kirim Pendaftaran'}
                       </Button>
                     )}
                   </>

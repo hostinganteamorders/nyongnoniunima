@@ -93,7 +93,7 @@ export default function FinalistsClient({ finalists }: FinalistsClientProps) {
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-blue/10">
                 <Clock className="h-7 w-7 text-primary-blue" />
               </div>
-              <h2 className="text-display-md text-dark-text mb-3">Coming Soon</h2>
+              <h2 className="text-display-md text-dark-text mb-3">Segera Hadir</h2>
               <p className="text-body-lg text-dark-secondary leading-relaxed">
                 Para finalis Nyong Noni UNIMA akan segera diumumkan. Pantau terus informasi terbaru dari kami.
               </p>

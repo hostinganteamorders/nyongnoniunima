@@ -106,7 +106,7 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-white/50 text-xs">
-            &copy; {year} Nyong Noni UNIMA. All rights reserved.
+            &copy; {year} Nyong Noni UNIMA. Hak cipta dilindungi undang-undang.
           </p>
           <div className="flex items-center gap-6">
             <Link

@@ -10,12 +10,12 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Nyong Noni UNIMA Official Portal',
+    default: 'Portal Resmi Nyong Noni UNIMA',
     template: '%s | Nyong Noni UNIMA',
   },
   description: 'Portal resmi Nyong & Noni Universitas Negeri Manado — Wadah pengembangan mahasiswa dalam kepemimpinan, budaya, pariwisata, dan prestasi akademik.',
   openGraph: {
-    title: 'Nyong Noni UNIMA Official Portal',
+    title: 'Portal Resmi Nyong Noni UNIMA',
     description: 'Portal resmi Nyong & Noni Universitas Negeri Manado.',
     type: 'website',
     locale: 'id_ID',

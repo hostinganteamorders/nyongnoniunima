@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { RegistrationInput } from '@/lib/validations/registration'
 
 const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data, id: 'mock-id' })) as any
 const mockLocalQuery = vi.fn(() => []) as any
@@ -20,7 +21,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
-const VALID_APPLICANT = {
+const VALID_APPLICANT: RegistrationInput = {
   full_name: 'John Doe',
   email: 'john@example.com',
   phone: '081234567890',
@@ -62,6 +63,7 @@ describe('createApplicant', () => {
       phone: '',
       date_of_birth: '',
       place_of_birth: '',
+      gender: undefined as any,
       nim: '',
       faculty: '',
       study_program: '',

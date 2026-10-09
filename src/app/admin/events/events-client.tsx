@@ -22,13 +22,15 @@ interface EventItem {
   published: number | boolean
 }
 
+const EVENT_CATEGORIES = ['Audisi', 'Karantina', 'Grand Final', 'Kegiatan Sosial', 'Promosi Wisata']
+
 export function EventsClient({ events }: { events: EventItem[] }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [form, setForm] = useState({ title: '', slug: '', description: '', date: '', location: '', category: '', image_url: '', published: false })
+  const [form, setForm] = useState({ title: '', slug: '', description: '', date: '', location: '', category: 'Kegiatan Sosial', image_url: '', published: false })
 
   useEffect(() => {
     if (notification) {
@@ -49,10 +51,11 @@ export function EventsClient({ events }: { events: EventItem[] }) {
     try {
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
-      await createEvent(fd)
+      const res = await createEvent(fd)
+      if (res?.error) throw new Error(res.error)
       setNotification({ type: 'success', message: 'Acara berhasil ditambahkan' })
       setShowAdd(false)
-      setForm({ title: '', slug: '', description: '', date: '', location: '', category: '', image_url: '', published: false })
+      setForm({ title: '', slug: '', description: '', date: '', location: '', category: 'Kegiatan Sosial', image_url: '', published: false })
       router.refresh()
     } catch {
       setNotification({ type: 'error', message: 'Gagal menambahkan acara' })
@@ -152,7 +155,20 @@ export function EventsClient({ events }: { events: EventItem[] }) {
                   <div><Label>Lokasi</Label><Input required value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Kategori</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
+                  <div>
+                    <Label>Kategori</Label>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-body-sm text-dark-text"
+                    >
+                      {EVENT_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div><Label>URL Gambar</Label><Input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></div>
                 </div>
                 <label className="flex items-center gap-2 text-sm">

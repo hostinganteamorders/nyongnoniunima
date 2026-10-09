@@ -1,24 +1,21 @@
 import { Calendar, MapPin, Clock } from 'lucide-react'
 import { getPublicEvents } from '@/server/actions/content'
+import { TahapanPemilihan } from '@/components/tahapan'
 
 const CATEGORIES = [
-  'Open Registration',
-  'Technical Meeting',
-  'Interview',
-  'Training Camp',
-  'Talent Show',
-  'Social Project',
+  'Audisi',
+  'Karantina',
   'Grand Final',
+  'Kegiatan Sosial',
+  'Promosi Wisata',
 ] as const
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Grand Final': 'bg-accent text-white',
-  'Training Camp': 'bg-primary-blue text-white',
-  'Interview': 'bg-primary-blue/80 text-white',
-  'Technical Meeting': 'bg-dark-secondary text-white',
-  'Open Registration': 'bg-primary-blue-light text-white',
-  'Talent Show': 'bg-accent-dark text-white',
-  'Social Project': 'bg-accent-light text-primary-blue-dark',
+  'Audisi': 'bg-primary-blue text-white',
+  'Karantina': 'bg-primary-blue/80 text-white',
+  'Kegiatan Sosial': 'bg-primary-blue-light text-white',
+  'Promosi Wisata': 'bg-accent-light text-primary-blue-dark',
 }
 
 interface EventItem {
@@ -55,6 +52,9 @@ export default async function EventsPage() {
           </p>
         </div>
       </section>
+
+      {/* ─── TAHAPAN PEMILIHAN ─── */}
+      <TahapanPemilihan />
 
       <section className="py-[96px] bg-light-gray">
         <div className="mx-auto max-w-7xl px-[20px]">

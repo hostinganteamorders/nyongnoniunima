@@ -44,10 +44,9 @@ describe('Header', () => {
     expect(berandaLink.closest('a')).not.toHaveAttribute('aria-current')
   })
 
-  it('renders brand logo text', () => {
+  it('renders brand logo', () => {
     render(<Header />)
-    expect(screen.getByText('Nyong Noni')).toBeInTheDocument()
-    expect(screen.getByText('UNIMA')).toBeInTheDocument()
+    expect(screen.getByAltText('Logo Nyong Noni UNIMA')).toBeInTheDocument()
   })
 
   it('renders skip link', () => {

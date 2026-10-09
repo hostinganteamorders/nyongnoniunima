@@ -16,10 +16,10 @@ describe('Countdown', () => {
     const targetDate = '2026-08-15T00:00:00Z'
     render(<Countdown targetDate={targetDate} />)
 
-    expect(screen.getByText('Days')).toBeInTheDocument()
-    expect(screen.getByText('Hours')).toBeInTheDocument()
-    expect(screen.getByText('Minutes')).toBeInTheDocument()
-    expect(screen.getByText('Seconds')).toBeInTheDocument()
+    expect(screen.getByText('Hari')).toBeInTheDocument()
+    expect(screen.getByText('Jam')).toBeInTheDocument()
+    expect(screen.getByText('Menit')).toBeInTheDocument()
+    expect(screen.getByText('Detik')).toBeInTheDocument()
   })
 
   it('returns null for past date', () => {

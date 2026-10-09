@@ -93,7 +93,7 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                     : 'bg-light-gray text-dark-secondary hover:bg-border'
                 }`}
               >
-                {cat}
+                {cat === 'All' ? 'Semua' : cat}
               </button>
             ))}
           </div>
