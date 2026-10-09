@@ -136,18 +136,25 @@ export const titleholderSchema = z.object({
   category: z.enum(['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'], {
     errorMap: () => ({ message: 'Pilih kategori' }),
   }),
-  nyong_name: z.string().min(3, 'Nama Nyong minimal 3 karakter'),
-  noni_name: z.string().min(3, 'Nama Noni minimal 3 karakter'),
-  faculty: z.string().optional(),
-  study_program: z.string().optional(),
-  region: z.string().min(3, 'Region harus diisi'),
-  motto: z.string().optional(),
-  biography: z.string().optional(),
-  nyong_photo_url: z.string().optional(),
-  noni_photo_url: z.string().optional(),
-  nyong_instagram: z.string().optional(),
-  noni_instagram: z.string().optional(),
+  nyong_name: z
+    .string()
+    .default('')
+    .refine((v) => v === '' || v.length >= 3, 'Nama Nyong minimal 3 karakter'),
+  noni_name: z
+    .string()
+    .default('')
+    .refine((v) => v === '' || v.length >= 3, 'Nama Noni minimal 3 karakter'),
+  faculty: z.string().nullish(),
+  study_program: z.string().nullish(),
+  region: z.string().default(''),
+  biography: z.string().nullish(),
+  nyong_photo_url: z.string().nullish(),
+  noni_photo_url: z.string().nullish(),
+  nyong_instagram: z.string().nullish(),
+  noni_instagram: z.string().nullish(),
   sort_order: z.coerce.number().int().default(0),
+}).refine((d) => d.nyong_name !== '' || d.noni_name !== '', {
+  message: 'Isi minimal satu nama Nyong atau Noni',
 })
 
 export const sponsorSchema = z.object({

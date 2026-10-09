@@ -247,15 +247,15 @@ describe('createTitleholder', () => {
     const { createTitleholder } = await import('@/server/actions/finalists')
     const result = await createTitleholder({
       tahun: 2026,
-      category: 'Juara Utama',
+      category: 'Berbakat',
       nyong_name: 'New Nyong',
       noni_name: 'New Noni',
       region: 'Manado',
     })
     expect(result.error).toBeUndefined()
     expect(mockLocalInsert).toHaveBeenCalledWith('titleholders', expect.objectContaining({
-      category: 'Juara Utama',
-      sort_order: 1,
+      category: 'Berbakat',
+      sort_order: 10,
     }))
   })
 
@@ -264,6 +264,18 @@ describe('createTitleholder', () => {
     const result = await createTitleholder({ tahun: 1999, category: 'Invalid' } as any)
     expect(result.error).toBeDefined()
   })
+
+  it('rejects a side that already exists in the same tahun+category', async () => {
+    const { createTitleholder } = await import('@/server/actions/finalists')
+    const result = await createTitleholder({
+      tahun: 2026,
+      category: 'Juara Utama',
+      nyong_name: 'Another Nyong',
+      noni_name: '',
+    })
+    expect(result.error).toContain('Nyong untuk kategori')
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
 })
 
 describe('updateTitleholder', () => {
@@ -271,16 +283,29 @@ describe('updateTitleholder', () => {
     const { updateTitleholder } = await import('@/server/actions/finalists')
     const result = await updateTitleholder('t1', {
       tahun: 2026,
-      category: 'Wakil I',
+      category: 'Berbakat',
       nyong_name: 'John Updated',
       noni_name: 'Jane Updated',
       region: 'Manado',
     })
     expect(result.error).toBeUndefined()
     expect(mockLocalUpdate).toHaveBeenCalledWith('titleholders', 't1', expect.objectContaining({
-      category: 'Wakil I',
-      sort_order: 2,
+      category: 'Berbakat',
+      sort_order: 10,
     }))
+  })
+
+  it('rejects moving into a category whose side is already taken', async () => {
+    const { updateTitleholder } = await import('@/server/actions/finalists')
+    const result = await updateTitleholder('t1', {
+      tahun: 2026,
+      category: 'Wakil I',
+      nyong_name: 'John Updated',
+      noni_name: '',
+      region: 'Manado',
+    })
+    expect(result.error).toContain('Nyong untuk kategori')
+    expect(mockLocalUpdate).not.toHaveBeenCalled()
   })
 })
 

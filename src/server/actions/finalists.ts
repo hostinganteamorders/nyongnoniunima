@@ -31,10 +31,15 @@ const TITLEHOLDER_CATEGORY_ORDER: Record<string, number> = {
   'Other': 99,
 }
 
-function sortTitleholders<T extends { tahun: number; category: string }>(items: T[]): T[] {
+function sortTitleholders<T extends { tahun: number; category: string; nyong_name?: string | null }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     if (a.tahun !== b.tahun) return b.tahun - a.tahun
-    return (TITLEHOLDER_CATEGORY_ORDER[a.category] || 99) - (TITLEHOLDER_CATEGORY_ORDER[b.category] || 99)
+    const byCategory = (TITLEHOLDER_CATEGORY_ORDER[a.category] || 99) - (TITLEHOLDER_CATEGORY_ORDER[b.category] || 99)
+    if (byCategory !== 0) return byCategory
+    const aNyong = a.nyong_name ? 1 : 0
+    const bNyong = b.nyong_name ? 1 : 0
+    if (aNyong !== bNyong) return bNyong - aNyong
+    return 0
   })
 }
 
@@ -325,6 +330,37 @@ export async function deleteAlumniAchievement(id: string) {
   revalidatePath('/admin/alumni-achievements')
 }
 
+async function titleholderSideConflict(
+  data: { tahun: number; category: string; nyong_name: string; noni_name: string },
+  excludeId?: string,
+): Promise<string | null> {
+  const rows: { id: string; tahun: number; category: string; nyong_name: string; noni_name: string }[] = []
+
+  if (isUsingLocalDb()) {
+    rows.push(...localQuery<any>('titleholders') || [])
+  } else {
+    const adminClient = getAdminClient()
+    const { data: existing, error } = await adminClient
+      .from('titleholders')
+      .select('id, tahun, category, nyong_name, noni_name')
+      .eq('tahun', data.tahun)
+      .eq('category', data.category)
+    if (error) return null
+    rows.push(...(existing || []))
+  }
+
+  const others = rows.filter(
+    (r) => r.id !== excludeId && r.tahun === data.tahun && r.category === data.category,
+  )
+  if (data.nyong_name && others.some((r) => r.nyong_name)) {
+    return `Nyong untuk kategori ${data.category} ${data.tahun} sudah ada — silakan edit baris yang tersedia`
+  }
+  if (data.noni_name && others.some((r) => r.noni_name)) {
+    return `Noni untuk kategori ${data.category} ${data.tahun} sudah ada — silakan edit baris yang tersedia`
+  }
+  return null
+}
+
 export async function createTitleholder(data: Record<string, unknown>) {
   await requireAdmin()
   const parsed = titleholderSchema.safeParse({
@@ -335,6 +371,9 @@ export async function createTitleholder(data: Record<string, unknown>) {
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`).join('; ') }
   }
+
+  const conflict = await titleholderSideConflict(parsed.data)
+  if (conflict) return { error: conflict }
 
   if (isUsingLocalDb()) {
     const record = localInsert('titleholders', { ...parsed.data, id: crypto.randomUUID() })
@@ -353,6 +392,22 @@ export async function createTitleholder(data: Record<string, unknown>) {
   return { data: result }
 }
 
+async function effectiveSortOrder(id: string, data: { category: string; sort_order: number }): Promise<number> {
+  try {
+    if (isUsingLocalDb()) {
+      const existing = (localQuery<any>('titleholders', { where: { id } }) || []).find((row) => row.id === id)
+      if (existing && existing.category === data.category && typeof existing.sort_order === 'number') return existing.sort_order
+    } else {
+      const adminClient = getAdminClient()
+      const { data: existing } = await adminClient.from('titleholders').select('category, sort_order').eq('id', id).maybeSingle()
+      if (existing && existing.category === data.category && typeof existing.sort_order === 'number') return existing.sort_order
+    }
+  } catch {
+    // pertahankan sort_order hasil kategori bila gagal membaca baris lama
+  }
+  return data.sort_order
+}
+
 export async function updateTitleholder(id: string, data: Record<string, unknown>) {
   await requireAdmin()
   const parsed = titleholderSchema.safeParse({
@@ -364,20 +419,25 @@ export async function updateTitleholder(id: string, data: Record<string, unknown
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`).join('; ') }
   }
 
+  const conflict = await titleholderSideConflict(parsed.data, id)
+  if (conflict) return { error: conflict }
+
+  const sort_order = await effectiveSortOrder(id, parsed.data)
+  const writeData = { ...parsed.data, sort_order }
   const updatedAt = new Date().toISOString()
 
   if (isUsingLocalDb()) {
-    localUpdate('titleholders', id, { ...parsed.data, updated_at: updatedAt })
+    localUpdate('titleholders', id, { ...writeData, updated_at: updatedAt })
     revalidatePath('/titleholders')
     revalidatePath('/admin/titleholders')
     revalidatePath('/')
-    return { data: parsed.data }
+    return { data: writeData }
   }
 
   const adminClient = getAdminClient()
   const { data: result, error } = await adminClient
     .from('titleholders')
-    .update({ ...parsed.data, updated_at: updatedAt })
+    .update({ ...writeData, updated_at: updatedAt })
     .eq('id', id)
     .select()
     .single()

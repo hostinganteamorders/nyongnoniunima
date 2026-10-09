@@ -245,8 +245,31 @@ describe('titleholderSchema', () => {
     expect(titleholderSchema.safeParse({ ...validData, category: 'Invalid' }).success).toBe(false)
   })
 
-  it('rejects missing region', () => {
-    expect(titleholderSchema.safeParse({ ...validData, region: '' }).success).toBe(false)
+  it('allows missing region (defaults to empty)', () => {
+    const result = titleholderSchema.safeParse({ ...validData, region: '' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.region).toBe('')
+  })
+
+  it('allows a single-side name (nyong only / noni only)', () => {
+    expect(
+      titleholderSchema.safeParse({ tahun: 2026, category: 'Wakil II', nyong_name: 'John Doe' }).success,
+    ).toBe(true)
+    expect(
+      titleholderSchema.safeParse({ tahun: 2026, category: 'Wakil II', noni_name: 'Jane Doe' }).success,
+    ).toBe(true)
+  })
+
+  it('rejects when both names are empty', () => {
+    expect(
+      titleholderSchema.safeParse({ tahun: 2026, category: 'Juara Utama' }).success,
+    ).toBe(false)
+  })
+
+  it('rejects a name shorter than 3 characters', () => {
+    expect(
+      titleholderSchema.safeParse({ tahun: 2026, category: 'Juara Utama', nyong_name: 'Jo' }).success,
+    ).toBe(false)
   })
 })
 
