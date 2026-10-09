@@ -29,7 +29,15 @@ test.describe('Registration Page', () => {
     await page.selectOption('#gender', 'Laki-laki')
     await page.fill('#nim', '20999999')
     await page.selectOption('#faculty', { index: 1 })
-    await page.waitForTimeout(400)
+    await expect
+      .poll(
+        async () =>
+          page.$$eval('#study_program option', (os) =>
+            Array.from(os).map((o) => (o as HTMLOptionElement).value).filter(Boolean),
+          ),
+        { timeout: 10_000 },
+      )
+      .not.toEqual([])
     const prodi = await page.$$eval('#study_program option', (os) => Array.from(os).map((o) => (o as HTMLOptionElement).value).filter(Boolean))
     expect(prodi.length).toBeGreaterThan(0)
     await page.selectOption('#study_program', prodi[0])
