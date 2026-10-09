@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Pencil, Trash2, X, Crown, Upload } from 'lucide-react'
 import { createCurrentTitleholder, updateCurrentTitleholder, deleteCurrentTitleholder } from '@/server/actions/unima'
+import { CURRENT_TITLE_TITLES } from '@/lib/validations/registration'
 import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
@@ -213,8 +214,8 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
       </Card>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-          <Card className="w-full max-w-lg my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">{editId ? 'Edit Titleholder' : 'Tambah Titleholder'}</CardTitle>
               <Button variant="ghost" size="icon" onClick={closeModal}><X className="h-4 w-4" /></Button>
@@ -222,7 +223,20 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Title</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Nyong Noni UNIMA 2026" /></div>
+                  <div>
+                    <Label>Title</Label>
+                    <select
+                      required
+                      className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-dark-text"
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    >
+                      <option value="">Pilih gelar</option>
+                      {CURRENT_TITLE_TITLES.map((title) => (
+                        <option key={title} value={title}>{title}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div><Label>Nama</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 </div>
                 <div><Label>Fakultas</Label><Input value={form.faculty} onChange={(e) => setForm({ ...form, faculty: e.target.value })} /></div>

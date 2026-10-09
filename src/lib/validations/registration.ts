@@ -165,24 +165,26 @@ export const sponsorSchema = z.object({
   sort_order: z.coerce.number().int().default(0),
 })
 
+export const CURRENT_TITLE_TITLES = [
+  'Nyong UNIMA', 'Noni UNIMA',
+  'Wakil 1 Nyong', 'Wakil 1 Noni',
+  'Wakil 2 Nyong', 'Wakil 2 Noni',
+  'Harapan 1 Nyong', 'Harapan 1 Noni',
+  'Harapan 2 Nyong', 'Harapan 2 Noni',
+  'Nyong Berbakat', 'Noni Berbakat',
+  'Nyong Favorit', 'Noni Favorit',
+  'Nyong Fotogenik', 'Noni Fotogenik',
+  'Nyong Duta Lingkungan', 'Noni Duta Lingkungan',
+  'Nyong Duta Sosial', 'Noni Duta Sosial',
+  'Nyong Duta Budaya', 'Noni Duta Budaya',
+  'Nyong Duta Bahasa', 'Noni Duta Bahasa',
+  'Nyong Duta Seni', 'Noni Duta Seni',
+  'Nyong Persahabatan', 'Noni Persahabatan',
+  'Nyong Intelegensia', 'Noni Intelegensia',
+] as const
+
 export const currentTitleholderSchema = z.object({
-  title: z.enum([
-    'Nyong UNIMA', 'Noni UNIMA',
-    'Wakil 1 Nyong', 'Wakil 1 Noni',
-    'Wakil 2 Nyong', 'Wakil 2 Noni',
-    'Harapan 1 Nyong', 'Harapan 1 Noni',
-    'Harapan 2 Nyong', 'Harapan 2 Noni',
-    'Nyong Berbakat', 'Noni Berbakat',
-    'Nyong Favorit', 'Noni Favorit',
-    'Nyong Fotogenik', 'Noni Fotogenik',
-    'Nyong Duta Lingkungan', 'Noni Duta Lingkungan',
-    'Nyong Duta Sosial', 'Noni Duta Sosial',
-    'Nyong Duta Budaya', 'Noni Duta Budaya',
-    'Nyong Duta Bahasa', 'Noni Duta Bahasa',
-    'Nyong Duta Seni', 'Noni Duta Seni',
-    'Nyong Persahabatan', 'Noni Persahabatan',
-    'Nyong Intelegensia', 'Noni Intelegensia',
-  ], { errorMap: () => ({ message: 'Pilih gelar' }) }),
+  title: z.enum(CURRENT_TITLE_TITLES, { errorMap: () => ({ message: 'Pilih gelar' }) }),
   name: z.string().min(3, 'Nama minimal 3 karakter'),
   faculty: z.string().optional(),
   study_program: z.string().optional(),

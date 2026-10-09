@@ -124,14 +124,18 @@ export async function createCurrentTitleholder(data: { title: string; name: stri
 
 export async function updateCurrentTitleholder(id: string, data: { title?: string; name?: string; faculty?: string; study_program?: string; photo_url?: string; instagram?: string; biography?: string; sort_order?: number }) {
   await requireAdmin()
+  const parsed = currentTitleholderSchema.safeParse(data)
+  if (!parsed.success) {
+    return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
+  }
   const updatedAt = new Date().toISOString()
   if (isUsingLocalDb()) {
-    localUpdate('current_titleholders', id, { ...data, updated_at: updatedAt })
+    localUpdate('current_titleholders', id, { ...parsed.data, updated_at: updatedAt })
     revalidatePath('/admin/current-titleholders'); revalidatePath('/current-titleholders')
-    return { data }
+    return { data: parsed.data }
   }
   const adminClient = getAdminClient()
-  const { data: result, error } = await adminClient.from('current_titleholders').update({ ...data, updated_at: updatedAt }).eq('id', id).select().single()
+  const { data: result, error } = await adminClient.from('current_titleholders').update({ ...parsed.data, updated_at: updatedAt }).eq('id', id).select().single()
   if (error) return { error: error.message }
   revalidatePath('/admin/current-titleholders'); revalidatePath('/current-titleholders')
   return { data: result }

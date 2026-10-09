@@ -332,8 +332,8 @@ export function TitleholdersClient({ data }: { data: any[] }) {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-2xl rounded-2xl border border-border bg-white p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-headline text-dark-text">
                 {editRef ? 'Edit Titleholder' : 'Tambah Titleholder'}

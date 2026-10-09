@@ -10,6 +10,7 @@ import {
   hallOfFameSchema,
   alumniAchievementSchema,
   titleholderSchema,
+  currentTitleholderSchema,
 } from '@/lib/validations/registration'
 
 const BASE_REGISTRATION = {
@@ -328,5 +329,37 @@ describe('gallerySchema', () => {
   it('accepts optional description', () => {
     const result = gallerySchema.safeParse({ ...validGallery, description: 'A great photo' })
     expect(result.success).toBe(true)
+  })
+})
+
+describe('currentTitleholderSchema', () => {
+  const validCurrent = { title: 'Nyong UNIMA', name: 'John Doe' }
+
+  it('validates correct current titleholder data', () => {
+    expect(currentTitleholderSchema.safeParse(validCurrent).success).toBe(true)
+  })
+
+  it('rejects empty title with Pilih gelar message', () => {
+    const result = currentTitleholderSchema.safeParse({ ...validCurrent, title: '' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const errors = JSON.stringify(result.error.flatten().fieldErrors)
+      expect(errors).toContain('Pilih gelar')
+    }
+  })
+
+  it('rejects free-text title outside the allowed list', () => {
+    const result = currentTitleholderSchema.safeParse({ ...validCurrent, title: 'Nyong Noni UNIMA 2026' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const errors = JSON.stringify(result.error.flatten().fieldErrors)
+      expect(errors).toContain('Pilih gelar')
+    }
+  })
+
+  it('coerces sort_order from string', () => {
+    const result = currentTitleholderSchema.safeParse({ ...validCurrent, sort_order: '5' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.sort_order).toBe(5)
   })
 })
