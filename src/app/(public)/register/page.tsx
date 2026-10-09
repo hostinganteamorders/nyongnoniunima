@@ -125,6 +125,18 @@ export default function RegisterPage() {
     setStep((prev) => Math.max(prev - 1, 0))
   }
 
+  const displayValue = (key: string, value: unknown) => {
+    if (value === undefined || value === null || value === '') return '-'
+    if (key === 'faculty') return faculties.find((f) => f.id === value)?.name || String(value)
+    if (key === 'study_program') return studyPrograms.find((sp) => sp.id === value)?.name || String(value)
+    if (key === 'date_of_birth') {
+      const [y, m, d] = String(value).split('-').map(Number)
+      if (y && m && d) return new Date(y, m - 1, d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      return String(value)
+    }
+    return String(value)
+  }
+
   const onSubmit = async (data: RegistrationInput) => {
     setSubmitError('')
     for (let i = 0; i < 3; i++) {
@@ -286,7 +298,7 @@ export default function RegisterPage() {
                     {Object.entries(getValues()).filter(([k]) => k !== 'consent').map(([key, value]) => (
                       <div key={key} className="flex justify-between border-b border-border pb-2 last:border-0 last:pb-0">
                         <span className="text-dark-secondary text-sm">{FIELD_LABELS[key] || key.replace(/_/g, ' ')}</span>
-                        <span className="font-semibold text-dark-text text-sm text-right max-w-[60%]">{value?.toString() || '-'}</span>
+                        <span className="font-semibold text-dark-text text-sm text-right max-w-[60%]">{displayValue(key, value)}</span>
                       </div>
                     ))}
                   </div>
