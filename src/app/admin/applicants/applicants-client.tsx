@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, Trash2, X } from 'lucide-react'
+import { Plus, Search, Trash2, X, Eye } from 'lucide-react'
 import { updateApplicantStatus, deleteApplicant, createApplicant } from '@/server/actions/applicants'
+import { getFaculties, getStudyPrograms } from '@/server/actions/unima'
 import { useRouter } from 'next/navigation'
 
 interface Applicant {
@@ -24,6 +25,42 @@ interface Applicant {
   education?: string
   date_of_birth?: string
   address?: string
+  place_of_birth?: string
+  gender?: string
+  nim?: string
+  faculty?: string
+  study_program?: string
+  semester?: number
+  instagram?: string
+  tiktok?: string
+  facebook?: string
+  essay?: string
+  photo_url?: string | null
+  passport_photo_url?: string | null
+  fullbody_photo_url?: string | null
+  ktm_url?: string | null
+  ktp_url?: string | null
+  cv_url?: string | null
+  statement_letter_url?: string | null
+}
+
+interface Faculty { id: string; name: string }
+interface StudyProgram { id: string; name: string }
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  verified: 'Terverifikasi',
+  rejected: 'Ditolak',
+  finalist: 'Finalis',
+}
+
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-border/50 py-2 last:border-0 last:pb-0">
+      <span className="shrink-0 text-sm text-dark-secondary">{label}</span>
+      <span className="break-words text-right text-sm font-medium text-dark-text">{value || '-'}</span>
+    </div>
+  )
 }
 
 export function ApplicantsClient({
@@ -43,6 +80,14 @@ export function ApplicantsClient({
     city: '', province: '', height_cm: '', weight_kg: '', occupation: '', education: '',
   })
   const [formError, setFormError] = useState('')
+  const [detail, setDetail] = useState<Applicant | null>(null)
+  const [faculties, setFaculties] = useState<Faculty[]>([])
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([])
+
+  useEffect(() => {
+    getFaculties().then((data) => setFaculties((data as Faculty[]) || [])).catch(() => {})
+    getStudyPrograms().then((data) => setStudyPrograms((data as StudyProgram[]) || [])).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (notification) {
@@ -50,6 +95,32 @@ export function ApplicantsClient({
       return () => clearTimeout(timer)
     }
   }, [notification])
+
+  const facultyName = (id?: string | null) => (id ? faculties.find((f) => f.id === id)?.name || id : '')
+  const prodiName = (id?: string | null) => (id ? studyPrograms.find((sp) => sp.id === id)?.name || id : '')
+  const formatDate = (d?: string | null) => {
+    if (!d) return ''
+    const [y, m, day] = d.slice(0, 10).split('-').map(Number)
+    return y && m && day ? new Date(y, m - 1, day).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : d
+  }
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso)
+    return isNaN(d.getTime()) ? iso : d.toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })
+  }
+
+  const docLinks: [string, string][] = detail
+    ? ([
+        ['Foto', detail.photo_url],
+        ['Paspor', detail.passport_photo_url],
+        ['Foto Full Body', detail.fullbody_photo_url],
+        ['KTM', detail.ktm_url],
+        ['KTP', detail.ktp_url],
+        ['CV', detail.cv_url],
+        ['Surat Pernyataan', detail.statement_letter_url],
+      ] as [string, string | null | undefined][]).filter((entry): entry is [string, string] => !!entry[1])
+    : []
+
+  const sectionTitle = 'mb-1 text-xs font-semibold uppercase tracking-widest text-accent-dark'
 
   const filtered = applicants.filter(
     (a) =>
@@ -167,7 +238,7 @@ export function ApplicantsClient({
                   <tr className="border-b border-border text-left text-muted">
                     <th className="pb-3 font-medium">Nama</th>
                     <th className="pb-3 font-medium hidden md:table-cell">Email</th>
-                    <th className="pb-3 font-medium hidden lg:table-cell">Kota</th>
+                    <th className="pb-3 font-medium hidden lg:table-cell">Kabupaten/Kota</th>
                     <th className="pb-3 font-medium">Status</th>
                     <th className="pb-3 font-medium hidden sm:table-cell">Tanggal</th>
                     <th className="pb-3 font-medium text-right">Aksi</th>
@@ -210,15 +281,25 @@ export function ApplicantsClient({
                         {new Date(a.created_at).toLocaleDateString('id-ID')}
                       </td>
                       <td className="py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDelete(a.id)}
-                          disabled={loading === a.id}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Detail ${a.full_name}`}
+                            onClick={() => setDetail(a)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(a.id)}
+                            disabled={loading === a.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -258,7 +339,7 @@ export function ApplicantsClient({
                     <Input required type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} />
                   </div>
                   <div>
-                    <Label>Kota</Label>
+                    <Label>Kabupaten/Kota</Label>
                     <Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                   </div>
                   <div className="col-span-2">
@@ -289,6 +370,102 @@ export function ApplicantsClient({
                 {formError && <p className="text-sm text-red-600">{formError}</p>}
                 <Button type="submit" className="w-full">Simpan</Button>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {detail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setDetail(null)}
+        >
+          <Card
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Detail Pendaftar</CardTitle>
+                <p className="mt-1 text-sm text-muted">{detail.full_name}</p>
+              </div>
+              <Button variant="ghost" size="icon" aria-label="Tutup detail" onClick={() => setDetail(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <h4 className={sectionTitle}>Identitas</h4>
+                <DetailRow label="Nama Lengkap" value={detail.full_name} />
+                <DetailRow label="Email" value={detail.email} />
+                <DetailRow label="Nomor Telepon" value={detail.phone} />
+                <DetailRow label="Tempat Lahir" value={detail.place_of_birth} />
+                <DetailRow label="Tanggal Lahir" value={formatDate(detail.date_of_birth)} />
+                <DetailRow label="Jenis Kelamin" value={detail.gender} />
+                <DetailRow label="NIM" value={detail.nim} />
+              </div>
+
+              <div>
+                <h4 className={sectionTitle}>Akademik</h4>
+                <DetailRow label="Fakultas" value={facultyName(detail.faculty)} />
+                <DetailRow label="Program Studi" value={prodiName(detail.study_program)} />
+                <DetailRow label="Semester" value={detail.semester} />
+                <DetailRow label="Pendidikan Terakhir" value={detail.education} />
+                <DetailRow label="Pekerjaan" value={detail.occupation} />
+              </div>
+
+              <div>
+                <h4 className={sectionTitle}>Alamat & Fisik</h4>
+                <DetailRow label="Alamat" value={detail.address} />
+                <DetailRow label="Kabupaten/Kota" value={detail.city} />
+                <DetailRow label="Provinsi" value={detail.province} />
+                <DetailRow label="Tinggi Badan (cm)" value={detail.height_cm} />
+                <DetailRow label="Berat Badan (kg)" value={detail.weight_kg} />
+              </div>
+
+              <div>
+                <h4 className={sectionTitle}>Media Sosial</h4>
+                <DetailRow label="Instagram" value={detail.instagram} />
+                <DetailRow label="TikTok" value={detail.tiktok} />
+                <DetailRow label="Facebook" value={detail.facebook} />
+              </div>
+
+              {detail.essay && (
+                <div>
+                  <h4 className={sectionTitle}>Esai Motivasi</h4>
+                  <p className="whitespace-pre-wrap rounded-lg border border-border bg-light-gray p-4 text-sm text-dark-text">
+                    {detail.essay}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <h4 className={sectionTitle}>Status & Pendaftaran</h4>
+                <DetailRow label="Status" value={STATUS_LABELS[detail.status] || detail.status} />
+                <DetailRow label="Tanggal Daftar" value={formatDateTime(detail.created_at)} />
+              </div>
+
+              {docLinks.length > 0 && (
+                <div>
+                  <h4 className={sectionTitle}>Dokumen</h4>
+                  {docLinks.map(([label, url]) => (
+                    <div
+                      key={label}
+                      className="flex justify-between gap-4 border-b border-border/50 py-2 last:border-0 last:pb-0"
+                    >
+                      <span className="shrink-0 text-sm text-dark-secondary">{label}</span>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-primary-blue underline"
+                      >
+                        Lihat
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
