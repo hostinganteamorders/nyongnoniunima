@@ -138,7 +138,7 @@ export default async function TitleholdersPage({
             <Crown className="h-10 w-10 text-accent" />
           </div>
           <p className="mx-auto max-w-2xl text-subhead text-dark-secondary">
-            Para pemegang gelar Nyong dan Noni UNIMA. Setiap gelar adalah bentuk apresiasi bagi para duta yang mewakili daerahnya masing-masing.
+            Para pemegang gelar Nyong dan Noni UNIMA. Setiap gelar adalah bentuk apresiasi bagi para duta yang mewakili fakultasnya masing-masing.
           </p>
         </div>
       </section>

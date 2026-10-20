@@ -16,18 +16,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default async function HallOfFamePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tahun?: string; kota?: string; category?: string }>
+  searchParams: Promise<{ tahun?: string; category?: string }>
 }) {
   const params = await searchParams
   const entries = await getHallOfFame().catch(() => []) as any[]
 
   const years = [...new Set(entries.map((e: any) => e.tahun))].sort((a, b) => b - a)
-  const cities = [...new Set(entries.map((e: any) => e.kabupaten_kota))].sort()
   const categories = [...new Set(entries.map((e: any) => e.category).filter(Boolean))].sort() as string[]
 
   const filtered = entries.filter((e: any) => {
     if (params.tahun && e.tahun !== Number(params.tahun)) return false
-    if (params.kota && e.kabupaten_kota !== params.kota) return false
     if (params.category && e.category !== params.category) return false
     return true
   })
@@ -45,7 +43,7 @@ export default async function HallOfFamePage({
             <Crown className="h-10 w-10 text-accent" />
           </div>
           <p className="text-subhead text-dark-secondary max-w-2xl mx-auto">
-            Penghargaan khusus Nyong Noni UNIMA — para penerima penghargaan berbakat, favorit, dan prestasi terbaik
+            Penghargaan khusus Nyong Noni UNIMA — apresiasi bagi para pemenang dan penerima penghargaan terbaik setiap tahunnya
           </p>
         </div>
       </section>
@@ -55,10 +53,8 @@ export default async function HallOfFamePage({
           <div className="mb-12">
             <HallOfFameFilter
               tahun={params.tahun}
-              kota={params.kota}
               category={params.category}
               years={years}
-              cities={cities}
               categories={categories}
             />
           </div>
@@ -98,7 +94,6 @@ export default async function HallOfFamePage({
                         )}
                       </div>
                       <p className="text-body-sm font-semibold text-dark-text">{entry.nyong_name}</p>
-                      <p className="text-[11px] text-dark-secondary mt-0.5">{entry.kabupaten_kota}</p>
                     </div>
                     <div className="text-center">
                       <div className="aspect-square rounded-xl overflow-hidden bg-light-gray border border-border mb-2">
@@ -111,7 +106,6 @@ export default async function HallOfFamePage({
                         )}
                       </div>
                       <p className="text-body-sm font-semibold text-dark-text">{entry.noni_name}</p>
-                      <p className="text-[11px] text-dark-secondary mt-0.5">{entry.kabupaten_kota}</p>
                     </div>
                   </div>
                 </div>

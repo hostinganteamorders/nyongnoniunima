@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getPublicFinalist } from '@/server/actions/finalists'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Cake, GraduationCap, Instagram, Facebook, Music2, Ruler, Weight, Briefcase, Mail, Phone, ArrowLeft, Heart } from 'lucide-react'
+import { Cake, GraduationCap, Instagram, Facebook, Music2, Ruler, Weight, Briefcase, Mail, Phone, ArrowLeft, Heart } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function FinalistDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -107,14 +107,6 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                   </div>
                 </div>
               )}
-              <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <MapPin className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-caption text-dark-secondary uppercase mb-1">Asal</p>
-                  <p className="text-body-sm font-semibold text-dark-text">{finalist.city}</p>
-                  {finalist.province && <p className="text-body-sm text-dark-secondary">{finalist.province}</p>}
-                </div>
-              </div>
               <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
                 <Cake className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
