@@ -7,16 +7,17 @@ import { TitleholdersGrid } from '@/components/titleholders-grid'
 import { TahapanPemilihan } from '@/components/tahapan'
 import { getPublicFinalists } from '@/server/actions/finalists'
 import { getPublicNews, getPublicEvents } from '@/server/actions/content'
-import { getCurrentTitleholders, getFaculties, isRegistrationOpen } from '@/server/actions/unima'
+import { getCurrentTitleholders, getFaculties, getSponsors, isRegistrationOpen } from '@/server/actions/unima'
 import { ArrowRight, ChevronRight, Clock } from 'lucide-react'
 
 export default async function HomePage() {
-  const [finalists, currentTitleholders, news, events, faculties, registrationOpen] = await Promise.all([
+  const [finalists, currentTitleholders, news, events, faculties, sponsors, registrationOpen] = await Promise.all([
     getPublicFinalists().catch(() => []),
     getCurrentTitleholders().catch(() => []),
     getPublicNews().catch(() => []),
     getPublicEvents().catch(() => []),
     getFaculties().catch(() => []),
+    getSponsors().catch(() => []),
     isRegistrationOpen().catch(() => false),
   ])
 
@@ -282,6 +283,50 @@ export default async function HomePage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── SPONSORS ─── */}
+      {sponsors.length > 0 && (
+        <section className="py-16 bg-white border-t border-border">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <p className="text-center text-caption uppercase tracking-widest text-dark-secondary mb-10">
+              Kolaborasi &amp; Sponsor
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-8">
+              {sponsors.map((sponsor: any) => {
+                const logo = sponsor.logo_url ? (
+                  <Image
+                    src={sponsor.logo_url}
+                    alt={`Logo ${sponsor.name}`}
+                    width={240}
+                    height={72}
+                    className="h-11 w-auto object-contain grayscale opacity-70 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
+                  />
+                ) : (
+                  <span className="text-body font-bold text-dark-secondary transition-colors group-hover:text-primary-blue">
+                    {sponsor.name}
+                  </span>
+                )
+                return sponsor.website ? (
+                  <a
+                    key={sponsor.id}
+                    href={sponsor.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group"
+                    aria-label={sponsor.name}
+                  >
+                    {logo}
+                  </a>
+                ) : (
+                  <div key={sponsor.id} className="group">
+                    {logo}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </section>

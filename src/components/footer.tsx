@@ -105,9 +105,29 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-white/50 text-xs">
-            &copy; {year} Nyong Noni UNIMA. Hak cipta dilindungi undang-undang.
-          </p>
+          <div className="text-center sm:text-left">
+            <p className="text-white/50 text-xs">
+              &copy; {year} Nyong Noni UNIMA. Hak cipta dilindungi undang-undang.
+            </p>
+            <a
+              href="https://ordersapp.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-white/40 transition-colors hover:text-white/70"
+              aria-label="ORDERS"
+            >
+              Powered by
+              <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 shadow-sm transition-shadow group-hover:shadow">
+                <Image
+                  src="/images/orders.png"
+                  alt="ORDERS"
+                  width={1000}
+                  height={353}
+                  className="h-4 w-auto"
+                />
+              </span>
+            </a>
+          </div>
           <div className="flex items-center gap-6">
             <Link
               href="/about"
