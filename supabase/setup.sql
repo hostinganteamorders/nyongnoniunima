@@ -298,7 +298,7 @@ DROP POLICY IF EXISTS "Admins can manage finalist profiles" ON public.finalist_p
 CREATE TABLE IF NOT EXISTS public.titleholders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tahun integer NOT NULL CHECK (tahun >= 2000 AND tahun <= 2100),
-  category text NOT NULL CHECK (category IN ('Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other')),
+  category text NOT NULL CHECK (category IN ('Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Duta Kesehatan', 'Duta Pendidikan', 'Intelegensia', 'Other')),
   nyong_name text NOT NULL,
   noni_name text NOT NULL,
   region text NOT NULL,
@@ -391,6 +391,8 @@ CREATE TABLE IF NOT EXISTS public.current_titleholders (
     'Nyong Duta Bahasa', 'Noni Duta Bahasa',
     'Nyong Duta Seni', 'Noni Duta Seni',
     'Nyong Duta Pariwisata', 'Noni Duta Pariwisata',
+    'Nyong Duta Kesehatan', 'Noni Duta Kesehatan',
+    'Nyong Duta Pendidikan', 'Noni Duta Pendidikan',
     'Nyong Persahabatan', 'Noni Persahabatan',
     'Nyong Intelegensia', 'Noni Intelegensia'
   )),

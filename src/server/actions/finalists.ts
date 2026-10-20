@@ -28,6 +28,8 @@ const TITLEHOLDER_CATEGORY_ORDER: Record<string, number> = {
   'Persahabatan': 12,
   'Duta Pariwisata': 13,
   'Intelegensia': 14,
+  'Duta Kesehatan': 15,
+  'Duta Pendidikan': 16,
   'Other': 99,
 }
 

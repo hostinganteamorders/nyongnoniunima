@@ -4,6 +4,61 @@ import fs from 'fs'
 
 let db: Database.Database | null = null
 
+const TITLEHOLDERS_TABLE_SQL = `
+    CREATE TABLE IF NOT EXISTS titleholders (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      tahun INTEGER NOT NULL,
+      category TEXT NOT NULL CHECK (category IN ('Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Duta Kesehatan', 'Duta Pendidikan', 'Intelegensia', 'Other')),
+      nyong_name TEXT NOT NULL,
+      noni_name TEXT NOT NULL,
+      faculty TEXT,
+      study_program TEXT,
+      region TEXT NOT NULL,
+      motto TEXT,
+      biography TEXT,
+      nyong_photo_url TEXT,
+      noni_photo_url TEXT,
+      nyong_instagram TEXT,
+      noni_instagram TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );`
+
+const CURRENT_TITLEHOLDERS_TABLE_SQL = `
+    CREATE TABLE IF NOT EXISTS current_titleholders (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      title TEXT NOT NULL CHECK (title IN (
+        'Nyong UNIMA', 'Noni UNIMA',
+        'Wakil 1 Nyong', 'Wakil 1 Noni',
+        'Wakil 2 Nyong', 'Wakil 2 Noni',
+        'Harapan 1 Nyong', 'Harapan 1 Noni',
+        'Harapan 2 Nyong', 'Harapan 2 Noni',
+        'Nyong Berbakat', 'Noni Berbakat',
+        'Nyong Favorit', 'Noni Favorit',
+        'Nyong Fotogenik', 'Noni Fotogenik',
+        'Nyong Duta Lingkungan', 'Noni Duta Lingkungan',
+        'Nyong Duta Sosial', 'Noni Duta Sosial',
+        'Nyong Duta Budaya', 'Noni Duta Budaya',
+        'Nyong Duta Bahasa', 'Noni Duta Bahasa',
+        'Nyong Duta Seni', 'Noni Duta Seni',
+        'Nyong Duta Pariwisata', 'Noni Duta Pariwisata',
+        'Nyong Duta Kesehatan', 'Noni Duta Kesehatan',
+        'Nyong Duta Pendidikan', 'Noni Duta Pendidikan',
+        'Nyong Persahabatan', 'Noni Persahabatan',
+        'Nyong Intelegensia', 'Noni Intelegensia'
+      )),
+      name TEXT NOT NULL,
+      faculty TEXT,
+      study_program TEXT,
+      photo_url TEXT,
+      instagram TEXT,
+      biography TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );`
+
 export function getLocalDb(): Database.Database {
   if (!db) {
     const BetterSqlite3 = require('better-sqlite3')
@@ -151,25 +206,7 @@ function initSchema(database: Database.Database) {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    CREATE TABLE IF NOT EXISTS titleholders (
-      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-      tahun INTEGER NOT NULL,
-      category TEXT NOT NULL CHECK (category IN ('Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other')),
-      nyong_name TEXT NOT NULL,
-      noni_name TEXT NOT NULL,
-      faculty TEXT,
-      study_program TEXT,
-      region TEXT NOT NULL,
-      motto TEXT,
-      biography TEXT,
-      nyong_photo_url TEXT,
-      noni_photo_url TEXT,
-      nyong_instagram TEXT,
-      noni_instagram TEXT,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
+    ${TITLEHOLDERS_TABLE_SQL}
 
     CREATE TABLE IF NOT EXISTS faculties (
       id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -205,36 +242,7 @@ function initSchema(database: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    CREATE TABLE IF NOT EXISTS current_titleholders (
-      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-      title TEXT NOT NULL CHECK (title IN (
-        'Nyong UNIMA', 'Noni UNIMA',
-        'Wakil 1 Nyong', 'Wakil 1 Noni',
-        'Wakil 2 Nyong', 'Wakil 2 Noni',
-        'Harapan 1 Nyong', 'Harapan 1 Noni',
-        'Harapan 2 Nyong', 'Harapan 2 Noni',
-        'Nyong Berbakat', 'Noni Berbakat',
-        'Nyong Favorit', 'Noni Favorit',
-        'Nyong Fotogenik', 'Noni Fotogenik',
-        'Nyong Duta Lingkungan', 'Noni Duta Lingkungan',
-        'Nyong Duta Sosial', 'Noni Duta Sosial',
-        'Nyong Duta Budaya', 'Noni Duta Budaya',
-        'Nyong Duta Bahasa', 'Noni Duta Bahasa',
-        'Nyong Duta Seni', 'Noni Duta Seni',
-        'Nyong Duta Pariwisata', 'Noni Duta Pariwisata',
-        'Nyong Persahabatan', 'Noni Persahabatan',
-        'Nyong Intelegensia', 'Noni Intelegensia'
-      )),
-      name TEXT NOT NULL,
-      faculty TEXT,
-      study_program TEXT,
-      photo_url TEXT,
-      instagram TEXT,
-      biography TEXT,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
+    ${CURRENT_TITLEHOLDERS_TABLE_SQL}
 
     -- Seed faculties if empty
     INSERT OR IGNORE INTO faculties (id, name, code) VALUES
@@ -295,6 +303,59 @@ function initSchema(database: Database.Database) {
       ('s_grand_final_date', 'grand_final_date', '"2026-12-15T19:00:00"'),
       ('s_reg_open', 'registration_open', 'false');
   `)
+
+  migrateStaleCategoryChecks(database)
+}
+
+function getTableSql(database: Database.Database, table: string): string {
+  const row = database
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+    .get(table) as { sql?: string } | undefined
+  return row?.sql || ''
+}
+
+// SQLite cannot ALTER a CHECK constraint. Tables created before new
+// category values existed reject inserts, so rebuild them in place,
+// preserving existing rows (columns are matched by intersection).
+function rebuildTable(database: Database.Database, table: string, createSql: string): void {
+  const temp = `${table}_migrate`
+  const existing = (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[])
+    .map((c) => c.name)
+  if (existing.length === 0) return
+
+  database.exec(`DROP TABLE IF EXISTS ${temp};`)
+  database.exec(
+    createSql.replace(
+      new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`),
+      `CREATE TABLE ${temp}`
+    )
+  )
+
+  const dest = (database.prepare(`PRAGMA table_info(${temp})`).all() as { name: string }[])
+    .map((c) => c.name)
+    .filter((c) => existing.includes(c))
+  if (dest.length > 0) {
+    database
+      .prepare(`INSERT INTO ${temp} (${dest.join(', ')}) SELECT ${dest.join(', ')} FROM ${table}`)
+      .run()
+  }
+
+  database.pragma('foreign_keys = OFF')
+  database.exec(`DROP TABLE ${table}; ALTER TABLE ${temp} RENAME TO ${table};`)
+  database.pragma('foreign_keys = ON')
+}
+
+function migrateStaleCategoryChecks(database: Database.Database): void {
+  const targets: [string, string, string][] = [
+    ['titleholders', TITLEHOLDERS_TABLE_SQL, "'Duta Kesehatan'"],
+    ['current_titleholders', CURRENT_TITLEHOLDERS_TABLE_SQL, "'Nyong Duta Kesehatan'"],
+  ]
+  for (const [table, createSql, needle] of targets) {
+    const sql = getTableSql(database, table)
+    if (sql && !sql.includes(needle)) {
+      rebuildTable(database, table, createSql)
+    }
+  }
 }
 
 export function isUsingLocalDb(): boolean {

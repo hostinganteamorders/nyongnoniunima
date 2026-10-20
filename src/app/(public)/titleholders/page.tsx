@@ -19,6 +19,8 @@ const CATEGORY_ORDER: Record<string, number> = {
   'Persahabatan': 18,
   'Intelegensia': 19,
   'Duta Pariwisata': 20,
+  'Duta Kesehatan': 21,
+  'Duta Pendidikan': 22,
   'Other': 99,
 }
 
