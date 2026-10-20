@@ -486,15 +486,15 @@ CREATE INDEX IF NOT EXISTS idx_sponsors_sort ON public.sponsors(sort_order);
 CREATE INDEX IF NOT EXISTS idx_current_titleholders_sort ON public.current_titleholders(sort_order);
 CREATE INDEX IF NOT EXISTS idx_current_titleholders_title ON public.current_titleholders(title);
 
--- Seed faculties
+-- Seed faculties (nama & kode resmi UNIMA — web.unima.ac.id/fakultas)
 INSERT INTO public.faculties (name, code) VALUES
-  ('Fakultas Ilmu Pendidikan', 'FIP'),
+  ('Fakultas Ilmu Pendidikan dan Psikologi', 'FIPP'),
   ('Fakultas Bahasa dan Seni', 'FBS'),
   ('Fakultas Ilmu Sosial dan Hukum', 'FISH'),
-  ('Fakultas Matematika dan Ilmu Pengetahuan Alam', 'FMIPA'),
+  ('Fakultas MIPA dan Kebumian', 'FMIPAK'),
   ('Fakultas Teknik', 'FT'),
-  ('Fakultas Ekonomi', 'FE'),
-  ('Fakultas Olahraga dan Kesehatan', 'FOK'),
+  ('Fakultas Ekonomi dan Bisnis', 'FEB'),
+  ('Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'FIKKM'),
   ('Fakultas Kedokteran', 'FK')
 ON CONFLICT (code) DO NOTHING;
 
@@ -502,10 +502,10 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO public.study_programs (faculty_id, name, code) 
 SELECT f.id, sp.name, sp.code
 FROM (VALUES 
-  ('FIP', 'PGSD', 'PGSD'),
-  ('FIP', 'PG PAUD', 'PGPAUD'),
-  ('FIP', 'Bimbingan dan Konseling', 'BK'),
-  ('FIP', 'Pendidikan Luar Biasa', 'PLB'),
+  ('FIPP', 'PGSD', 'PGSD'),
+  ('FIPP', 'PG PAUD', 'PGPAUD'),
+  ('FIPP', 'Bimbingan dan Konseling', 'BK'),
+  ('FIPP', 'Pendidikan Luar Biasa', 'PLB'),
   ('FBS', 'Pendidikan Bahasa Inggris', 'PBI'),
   ('FBS', 'Pendidikan Bahasa Indonesia', 'PBInd'),
   ('FBS', 'Pendidikan Seni Drama, Tari dan Musik', 'Sendratasik'),
@@ -514,25 +514,25 @@ FROM (VALUES
   ('FISH', 'Pendidikan Sejarah', 'PS'),
   ('FISH', 'Pendidikan Geografi', 'PG'),
   ('FISH', 'Pendidikan Pancasila dan Kewarganegaraan', 'PPKN'),
-  ('FMIPA', 'Pendidikan Matematika', 'PMat'),
-  ('FMIPA', 'Pendidikan IPA', 'PIPA'),
-  ('FMIPA', 'Pendidikan Biologi', 'PBio'),
-  ('FMIPA', 'Pendidikan Fisika', 'PFis'),
-  ('FMIPA', 'Pendidikan Kimia', 'PKim'),
-  ('FMIPA', 'Biologi', 'Bio'),
-  ('FMIPA', 'Fisika', 'Fis'),
-  ('FMIPA', 'Kimia', 'Kim'),
+  ('FMIPAK', 'Pendidikan Matematika', 'PMat'),
+  ('FMIPAK', 'Pendidikan IPA', 'PIPA'),
+  ('FMIPAK', 'Pendidikan Biologi', 'PBio'),
+  ('FMIPAK', 'Pendidikan Fisika', 'PFis'),
+  ('FMIPAK', 'Pendidikan Kimia', 'PKim'),
+  ('FMIPAK', 'Biologi', 'Bio'),
+  ('FMIPAK', 'Fisika', 'Fis'),
+  ('FMIPAK', 'Kimia', 'Kim'),
   ('FT', 'Pendidikan Teknik Mesin', 'PTM'),
   ('FT', 'Pendidikan Teknik Elektro', 'PTE'),
   ('FT', 'Pendidikan Teknik Bangunan', 'PTB'),
   ('FT', 'Teknik Informatika', 'TI'),
   ('FT', 'Pendidikan Teknologi Informasi dan Komunikasi', 'PTIK'),
-  ('FE', 'Pendidikan Ekonomi', 'PE'),
-  ('FE', 'Manajemen', 'Man'),
-  ('FE', 'Akuntansi', 'Akun'),
-  ('FOK', 'Pendidikan Jasmani, Kesehatan dan Rekreasi', 'PJKR'),
-  ('FOK', 'Pendidikan Kepelatihan Olahraga', 'PKO'),
-  ('FOK', 'Ilmu Keolahragaan', 'IK'),
+  ('FEB', 'Pendidikan Ekonomi', 'PE'),
+  ('FEB', 'Manajemen', 'Man'),
+  ('FEB', 'Akuntansi', 'Akun'),
+  ('FIKKM', 'Pendidikan Jasmani, Kesehatan dan Rekreasi', 'PJKR'),
+  ('FIKKM', 'Pendidikan Kepelatihan Olahraga', 'PKO'),
+  ('FIKKM', 'Ilmu Keolahragaan', 'IK'),
   ('FK', 'Pendidikan Profesi Dokter', 'PPD'),
   ('FK', 'Kedokteran', 'Ked')
 ) AS sp(code_prefix, name, code)

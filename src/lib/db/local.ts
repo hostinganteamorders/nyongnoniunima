@@ -244,15 +244,15 @@ function initSchema(database: Database.Database) {
 
     ${CURRENT_TITLEHOLDERS_TABLE_SQL}
 
-    -- Seed faculties if empty
+    -- Seed faculties if empty (nama & kode resmi UNIMA — web.unima.ac.id/fakultas)
     INSERT OR IGNORE INTO faculties (id, name, code) VALUES
-      ('fip', 'Fakultas Ilmu Pendidikan', 'FIP'),
+      ('fip', 'Fakultas Ilmu Pendidikan dan Psikologi', 'FIPP'),
       ('fbs', 'Fakultas Bahasa dan Seni', 'FBS'),
       ('fish', 'Fakultas Ilmu Sosial dan Hukum', 'FISH'),
-      ('fmipa', 'Fakultas Matematika dan Ilmu Pengetahuan Alam', 'FMIPA'),
+      ('fmipa', 'Fakultas MIPA dan Kebumian', 'FMIPAK'),
       ('ft', 'Fakultas Teknik', 'FT'),
-      ('fe', 'Fakultas Ekonomi', 'FE'),
-      ('fok', 'Fakultas Olahraga dan Kesehatan', 'FOK'),
+      ('fe', 'Fakultas Ekonomi dan Bisnis', 'FEB'),
+      ('fok', 'Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'FIKKM'),
       ('fk', 'Fakultas Kedokteran', 'FK');
 
     -- Seed study programs if empty
