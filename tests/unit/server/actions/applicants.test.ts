@@ -5,6 +5,7 @@ const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data, id: 'moc
 const mockLocalQuery = vi.fn(() => []) as any
 const mockLocalUpdate = vi.fn() as any
 const mockLocalDelete = vi.fn(() => true) as any
+const mockIsRegistrationOpen = vi.fn(() => true) as any
 
 vi.mock('@/lib/db/local', () => ({
   isUsingLocalDb: () => true,
@@ -12,6 +13,10 @@ vi.mock('@/lib/db/local', () => ({
   localQuery: mockLocalQuery,
   localUpdate: mockLocalUpdate,
   localDelete: mockLocalDelete,
+}))
+
+vi.mock('@/server/actions/unima', () => ({
+  isRegistrationOpen: mockIsRegistrationOpen,
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -25,26 +30,29 @@ const VALID_APPLICANT: RegistrationInput = {
   full_name: 'John Doe',
   email: 'john@example.com',
   phone: '081234567890',
-  date_of_birth: '2000-01-01',
+  date_of_birth: '2004-05-15',
   place_of_birth: 'Manado',
   gender: 'Laki-laki',
   nim: '20123456',
   faculty: 'fip',
   study_program: 'fip_pgsd',
   semester: 4,
+  ipk: 3.5,
   address: 'Jl. Contoh No. 123, Kelurahan, Kecamatan',
   city: 'Manado',
   province: 'Sulawesi Utara',
-  height_cm: 170,
+  height_cm: 175,
   weight_kg: 60,
   occupation: 'Mahasiswa',
   education: 'Sarjana S1',
+  foreign_language: 'English',
   essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.',
   consent: true,
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockIsRegistrationOpen.mockReturnValue(true)
 })
 
 describe('createApplicant', () => {
@@ -75,6 +83,7 @@ describe('createApplicant', () => {
       weight_kg: 0 as any,
       occupation: '',
       education: '',
+      foreign_language: '',
       essay: '',
       consent: undefined as any,
     })
@@ -112,20 +121,22 @@ describe('submitRegistration', () => {
     fd.append('full_name', 'John Doe')
     fd.append('email', 'john@example.com')
     fd.append('phone', '081234567890')
-    fd.append('date_of_birth', '2000-01-01')
+    fd.append('date_of_birth', '2004-05-15')
     fd.append('place_of_birth', 'Manado')
     fd.append('gender', 'Laki-laki')
     fd.append('nim', '20123456')
     fd.append('faculty', 'fip')
     fd.append('study_program', 'fip_pgsd')
     fd.append('semester', '4')
+    fd.append('ipk', '3.5')
     fd.append('address', 'Jl. Contoh No. 123, Kelurahan, Kecamatan')
     fd.append('city', 'Manado')
     fd.append('province', 'Sulawesi Utara')
-    fd.append('height_cm', '170')
+    fd.append('height_cm', '175')
     fd.append('weight_kg', '60')
     fd.append('occupation', 'Mahasiswa')
     fd.append('education', 'Sarjana S1')
+    fd.append('foreign_language', 'English')
     fd.append('essay', 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.')
     fd.append('consent', 'true')
     const result = await submitRegistration(fd)
@@ -147,6 +158,18 @@ describe('submitRegistration', () => {
     const fd = new FormData()
     const result = await submitRegistration(fd)
     expect(result.error).toBeDefined()
+  })
+
+  it('rejects submission when registration is closed', async () => {
+    mockIsRegistrationOpen.mockReturnValue(false)
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    const fd = new FormData()
+    fd.append('full_name', 'John Doe')
+    fd.append('email', 'john@example.com')
+    const result = await submitRegistration(fd)
+    expect(result.error).toBeDefined()
+    expect(result.error).toMatch(/ditutup/i)
+    expect(mockLocalInsert).not.toHaveBeenCalled()
   })
 })
 

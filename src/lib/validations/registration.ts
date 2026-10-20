@@ -1,29 +1,93 @@
 import { z } from 'zod'
 
-export const registrationSchema = z.object({
-  full_name: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
-  email: z.string().email('Email tidak valid'),
-  phone: z.string().min(10, 'Nomor telepon minimal 10 digit'),
-  date_of_birth: z.string().min(1, 'Tanggal lahir harus diisi'),
-  place_of_birth: z.string().min(3, 'Tempat lahir harus diisi'),
-  gender: z.enum(['Laki-laki', 'Perempuan'], { errorMap: () => ({ message: 'Pilih jenis kelamin' }) }),
-  nim: z.string().min(8, 'NIM minimal 8 karakter'),
-  faculty: z.string().min(1, 'Fakultas harus dipilih'),
-  study_program: z.string().min(1, 'Program studi harus dipilih'),
-  semester: z.coerce.number().min(1, 'Semester minimal 1').max(14, 'Semester maksimal 14'),
-  address: z.string().min(10, 'Alamat minimal 10 karakter'),
-  city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
-  province: z.string().min(3, 'Provinsi harus diisi'),
-  height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
-  weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
-  occupation: z.string().min(3, 'Pekerjaan harus diisi'),
-  education: z.string().min(3, 'Pendidikan harus diisi'),
-  instagram: z.string().optional(),
-  tiktok: z.string().optional(),
-  facebook: z.string().optional(),
-  essay: z.string().min(50, 'Esai minimal 50 karakter').max(2000, 'Esai maksimal 2000 karakter'),
-  consent: z.literal(true, { errorMap: () => ({ message: 'Anda harus menyetujui syarat dan ketentuan' }) }),
-})
+// Tanggal awal audisi — dipakai validasi usia maksimal 22 tahun (364 hari) saat audisi.
+export const AUDITION_START = '2026-10-26'
+
+// Usia maksimal 22 tahun + 364 hari dihitung dari tanggal audisi.
+const _audition = new Date(`${AUDITION_START}T00:00:00Z`)
+const MIN_BIRTH_DATE = new Date(_audition.getTime())
+MIN_BIRTH_DATE.setUTCFullYear(MIN_BIRTH_DATE.getUTCFullYear() - 22)
+MIN_BIRTH_DATE.setTime(MIN_BIRTH_DATE.getTime() - 364 * 24 * 60 * 60 * 1000)
+
+// Tinggi badan minimal per peran (dari Syarat & Ketentuan).
+const MIN_HEIGHT: Record<string, number> = { 'Laki-laki': 170, Perempuan: 160 }
+
+// Terima string kosong / undefined → undefined, selain itu Number(...).
+const _ipkPreprocess = (v: unknown) =>
+  v === '' || v === null || v === undefined ? undefined : Number(v)
+
+export const registrationSchema = z
+  .object({
+    full_name: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
+    email: z.string().email('Email tidak valid'),
+    phone: z.string().min(10, 'Nomor telepon minimal 10 digit'),
+    date_of_birth: z.string().min(1, 'Tanggal lahir harus diisi'),
+    place_of_birth: z.string().min(3, 'Tempat lahir minimal 3 karakter'),
+    gender: z.enum(['Laki-laki', 'Perempuan'], { errorMap: () => ({ message: 'Pilih jenis kelamin' }) }),
+    nim: z.string().min(8, 'NIM minimal 8 karakter'),
+    faculty: z.string().min(1, 'Fakultas harus dipilih'),
+    study_program: z.string().min(1, 'Program studi harus dipilih'),
+    semester: z.coerce.number().min(1, 'Semester minimal 1').max(7, 'Semester maksimal 7'),
+    ipk: z.preprocess(
+      _ipkPreprocess,
+      z.number().min(0, 'IPK tidak valid').max(4, 'IPK maksimal 4.00').optional()
+    ),
+    address: z.string().min(10, 'Alamat minimal 10 karakter'),
+    city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
+    province: z.string().min(3, 'Provinsi harus diisi'),
+    height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
+    weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
+    occupation: z.string().min(3, 'Pekerjaan harus diisi'),
+    education: z.string().min(3, 'Pendidikan harus diisi'),
+    instagram: z.string().optional(),
+    tiktok: z.string().optional(),
+    facebook: z.string().optional(),
+    foreign_language: z.string().min(2, 'Bahasa asing yang dikuasai harus diisi'),
+    essay: z.string().min(50, 'Esai minimal 50 karakter').max(2000, 'Esai maksimal 2000 karakter'),
+    consent: z.literal(true, { errorMap: () => ({ message: 'Anda harus menyetujui syarat dan ketentuan' }) }),
+  })
+  .superRefine((data, ctx) => {
+    // Usia maksimal 22 tahun (364 hari) saat audisi.
+    if (data.date_of_birth) {
+      const dob = new Date(`${data.date_of_birth}T00:00:00Z`)
+      if (!Number.isNaN(dob.getTime()) && dob < MIN_BIRTH_DATE) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['date_of_birth'],
+          message: 'Usia maksimal 22 tahun (364 hari) saat audisi',
+        })
+      }
+    }
+
+    // Tinggi badan minimal per peran: Nyong (Laki-laki) 170 cm, Noni (Perempuan) 160 cm.
+    if (data.gender && typeof data.height_cm === 'number') {
+      const minHeight = MIN_HEIGHT[data.gender] ?? 160
+      if (data.height_cm < minHeight) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['height_cm'],
+          message: `Tinggi badan minimal ${minHeight} cm untuk ${data.gender === 'Laki-laki' ? 'Nyong' : 'Noni'}`,
+        })
+      }
+    }
+
+    // IPK wajib & minimal 3.00 untuk semester 3 ke atas.
+    if (typeof data.semester === 'number' && data.semester >= 3) {
+      if (data.ipk === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ipk'],
+          message: 'IPK wajib diisi untuk semester 3 ke atas',
+        })
+      } else if (data.ipk < 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ipk'],
+          message: 'IPK minimal 3.00 untuk semester 3 ke atas',
+        })
+      }
+    }
+  })
 
 export const registrationStepSchema = [
   z.object({
@@ -31,12 +95,16 @@ export const registrationStepSchema = [
     email: z.string().email('Email tidak valid'),
     phone: z.string().min(10, 'Nomor telepon minimal 10 digit'),
     date_of_birth: z.string().min(1, 'Tanggal lahir harus diisi'),
-    place_of_birth: z.string().min(3, 'Tempat lahir harus diisi'),
+    place_of_birth: z.string().min(3, 'Tempat lahir minimal 3 karakter'),
     gender: z.enum(['Laki-laki', 'Perempuan'], { errorMap: () => ({ message: 'Pilih jenis kelamin' }) }),
     nim: z.string().min(8, 'NIM minimal 8 karakter'),
     faculty: z.string().min(1, 'Fakultas harus dipilih'),
     study_program: z.string().min(1, 'Program studi harus dipilih'),
-    semester: z.coerce.number().min(1, 'Semester minimal 1').max(14, 'Semester maksimal 14'),
+    semester: z.coerce.number().min(1, 'Semester minimal 1').max(7, 'Semester maksimal 7'),
+    ipk: z.preprocess(
+      _ipkPreprocess,
+      z.number().min(0, 'IPK tidak valid').max(4, 'IPK maksimal 4.00').optional()
+    ),
   }),
   z.object({
     address: z.string().min(10, 'Alamat minimal 10 karakter'),
@@ -51,6 +119,7 @@ export const registrationStepSchema = [
     instagram: z.string().optional(),
     tiktok: z.string().optional(),
     facebook: z.string().optional(),
+    foreign_language: z.string().min(2, 'Bahasa asing yang dikuasai harus diisi'),
     essay: z.string().min(50, 'Esai minimal 50 karakter').max(2000, 'Esai maksimal 2000 karakter'),
     consent: z.literal(true, { errorMap: () => ({ message: 'Anda harus menyetujui syarat dan ketentuan' }) }),
   }),

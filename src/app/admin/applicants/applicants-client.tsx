@@ -31,6 +31,8 @@ interface Applicant {
   faculty?: string
   study_program?: string
   semester?: number
+  ipk?: number
+  foreign_language?: string
   instagram?: string
   tiktok?: string
   facebook?: string
@@ -410,6 +412,8 @@ export function ApplicantsClient({
                 <DetailRow label="Fakultas" value={facultyName(detail.faculty)} />
                 <DetailRow label="Program Studi" value={prodiName(detail.study_program)} />
                 <DetailRow label="Semester" value={detail.semester} />
+                <DetailRow label="IPK" value={detail.ipk} />
+                <DetailRow label="Bahasa Asing" value={detail.foreign_language} />
                 <DetailRow label="Pendidikan Terakhir" value={detail.education} />
                 <DetailRow label="Pekerjaan" value={detail.occupation} />
               </div>

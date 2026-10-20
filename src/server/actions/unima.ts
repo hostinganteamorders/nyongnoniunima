@@ -82,16 +82,21 @@ export async function getSetting(key: string) {
   try { return found ? JSON.parse(found.value) : null } catch { return found?.value || null }
 }
 
+export async function isRegistrationOpen(): Promise<boolean> {
+  const value = await getSetting('registration_open')
+  return value === true || value === 'true'
+}
+
 export async function updateSetting(id: string, value: any) {
   await requireAdmin()
   const jsonValue = typeof value === 'string' ? value : JSON.stringify(value)
   if (isUsingLocalDb()) {
     localUpdate('settings', id, { value: jsonValue, updated_at: new Date().toISOString() })
-    revalidatePath('/admin/settings'); return
+    revalidatePath('/admin/settings'); revalidatePath('/'); revalidatePath('/register'); return
   }
   const adminClient = getAdminClient()
   await adminClient.from('settings').update({ value: jsonValue, updated_at: new Date().toISOString() }).eq('id', id)
-  revalidatePath('/admin/settings')
+  revalidatePath('/admin/settings'); revalidatePath('/'); revalidatePath('/register')
 }
 
 // ─── Current Titleholders ───

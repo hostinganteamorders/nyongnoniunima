@@ -209,7 +209,7 @@ INSERT INTO public.settings (key, value) VALUES
   ('contact_email', '"nyongnoni@unima.ac.id"'),
   ('contact_instagram', '"@nyongnoniunima"'),
   ('grand_final_date', '"2026-12-15T19:00:00"'),
-  ('registration_open', 'true'),
+  ('registration_open', 'false'),
   ('about_history', '""'),
   ('about_vision', '""'),
   ('about_mission', '""')

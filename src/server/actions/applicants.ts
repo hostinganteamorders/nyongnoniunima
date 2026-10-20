@@ -5,6 +5,7 @@ import { registrationSchema, type RegistrationInput } from '@/lib/validations/re
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isUsingLocalDb, localInsert, localQuery, localUpdate, localDelete } from '@/lib/db/local'
+import { isRegistrationOpen } from '@/server/actions/unima'
 
 interface ApplicantRecord {
   id: string
@@ -26,6 +27,10 @@ interface ApplicantRecord {
 }
 
 export async function submitRegistration(formData: FormData) {
+  if (!(await isRegistrationOpen())) {
+    return { error: 'Pendaftaran sedang ditutup. Silakan tunggu pengumuman pembukaan pendaftaran resmi berikutnya.' }
+  }
+
   const rawData = Object.fromEntries(formData.entries())
   const normalized = { ...rawData, consent: rawData.consent === 'true' }
   const parsed = registrationSchema.safeParse(normalized)

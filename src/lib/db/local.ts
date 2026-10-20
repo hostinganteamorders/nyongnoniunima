@@ -61,6 +61,8 @@ function initSchema(database: Database.Database) {
       instagram TEXT,
       tiktok TEXT,
       facebook TEXT,
+      ipk REAL,
+      foreign_language TEXT,
       photo_url TEXT,
       passport_photo_url TEXT,
       fullbody_photo_url TEXT,
@@ -290,7 +292,7 @@ function initSchema(database: Database.Database) {
       ('s_contact_email', 'contact_email', '"nyongnoni@unima.ac.id"'),
       ('s_contact_instagram', 'contact_instagram', '"@nyongnoniunima"'),
       ('s_grand_final_date', 'grand_final_date', '"2026-12-15T19:00:00"'),
-      ('s_reg_open', 'registration_open', 'true');
+      ('s_reg_open', 'registration_open', 'false');
   `)
 }
 

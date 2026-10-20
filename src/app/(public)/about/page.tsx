@@ -2,6 +2,7 @@ import { Award, Globe, MapPin, Users, Target, Eye, ChevronRight, Calendar, Check
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
+import { isRegistrationOpen } from '@/server/actions/unima'
 
 const values = [
   {
@@ -52,7 +53,8 @@ const orgStructure = [
   { role: 'Mentor & Pelatih', desc: 'Alumni dan praktisi berpengalaman' },
 ]
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const registrationOpen = await isRegistrationOpen().catch(() => false)
   return (
     <div className="bg-white min-h-screen pb-[120px]">
       {/* ─── HERO ─── */}
@@ -245,12 +247,14 @@ export default function AboutPage() {
             Bergabung Menjadi Bagian dari Sejarah
           </h2>
           <p className="text-body-lg text-white/80 mb-10">
-            Daftarkan dirimu sekarang dan jadilah bagian dari perjalanan Nyong Noni UNIMA.
+            {registrationOpen
+              ? 'Daftarkan dirimu sekarang dan jadilah bagian dari perjalanan Nyong Noni UNIMA.'
+              : 'Pendaftaran belum dibuka. Jadilah bagian dari perjalanan Nyong Noni UNIMA nantinya.'}
           </p>
           <div className="flex justify-center gap-4">
             <Link href="/register">
               <Button variant="accent" className="h-14 px-8 text-lg">
-                Daftar Sekarang
+                {registrationOpen ? 'Daftar Sekarang' : 'Coming Soon'}
               </Button>
             </Link>
             <Link href="/finalists">

@@ -7,16 +7,17 @@ import { TitleholdersGrid } from '@/components/titleholders-grid'
 import { TahapanPemilihan } from '@/components/tahapan'
 import { getPublicFinalists } from '@/server/actions/finalists'
 import { getPublicNews, getPublicEvents } from '@/server/actions/content'
-import { getCurrentTitleholders, getFaculties } from '@/server/actions/unima'
+import { getCurrentTitleholders, getFaculties, isRegistrationOpen } from '@/server/actions/unima'
 import { ArrowRight, ChevronRight, Clock } from 'lucide-react'
 
 export default async function HomePage() {
-  const [finalists, currentTitleholders, news, events, faculties] = await Promise.all([
+  const [finalists, currentTitleholders, news, events, faculties, registrationOpen] = await Promise.all([
     getPublicFinalists().catch(() => []),
     getCurrentTitleholders().catch(() => []),
     getPublicNews().catch(() => []),
     getPublicEvents().catch(() => []),
     getFaculties().catch(() => []),
+    isRegistrationOpen().catch(() => false),
   ])
 
   return (
@@ -36,8 +37,10 @@ export default async function HomePage() {
               priority
             />
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-pill px-4 py-2 mb-6">
-              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-accent text-sm font-semibold tracking-wide">Pendaftaran Dibuka</span>
+              <span className={`h-2 w-2 rounded-full ${registrationOpen ? 'bg-accent animate-pulse' : 'bg-white/60'}`} />
+              <span className="text-accent text-sm font-semibold tracking-wide">
+                {registrationOpen ? 'Pendaftaran Dibuka' : 'Pendaftaran Coming Soon'}
+              </span>
             </div>
             <h1 className="text-display-xxl text-white font-bold leading-tight mb-6">
               Nyong Noni UNIMA
@@ -50,7 +53,7 @@ export default async function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/register">
                 <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-8 text-body font-bold">
-                  Daftar Sekarang
+                  {registrationOpen ? 'Daftar Sekarang' : 'Coming Soon'}
                 </Button>
               </Link>
               <Link href="/finalists">
@@ -289,11 +292,13 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-display-xl text-white mb-4">Jadilah Bagian Sejarah</h2>
           <p className="text-body-lg text-white/80 mb-8 max-w-xl mx-auto">
-            Daftar sekarang dan jadilah duta mahasiswa berikutnya Universitas Negeri Manado. Wakili fakultasmu dan tunjukkan bakatmu.
+            {registrationOpen
+              ? 'Daftar sekarang dan jadilah duta mahasiswa berikutnya Universitas Negeri Manado. Wakili fakultasmu dan tunjukkan bakatmu.'
+              : 'Pendaftaran belum dibuka. Pantau terus untuk menjadi duta mahasiswa berikutnya Universitas Negeri Manado.'}
           </p>
           <Link href="/register">
             <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-10 text-body font-bold">
-              Daftar Sekarang
+              {registrationOpen ? 'Daftar Sekarang' : 'Coming Soon'}
             </Button>
           </Link>
         </div>

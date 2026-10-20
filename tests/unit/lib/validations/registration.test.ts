@@ -17,23 +17,25 @@ const BASE_REGISTRATION = {
   full_name: 'John Doe',
   email: 'john@example.com',
   phone: '081234567890',
-  date_of_birth: '2000-01-01',
+  date_of_birth: '2004-05-15',
   place_of_birth: 'Manado',
   gender: 'Laki-laki' as const,
   nim: '20123456',
   faculty: 'fip',
   study_program: 'fip_pgsd',
   semester: 4,
+  ipk: 3.5,
   address: 'Jl. Contoh No. 123, Kelurahan, Kecamatan',
   city: 'Manado',
   province: 'Sulawesi Utara',
-  height_cm: 170,
+  height_cm: 175,
   weight_kg: 60,
   occupation: 'Mahasiswa',
   education: 'Sarjana S1',
   instagram: '@johndoe',
   tiktok: '',
   facebook: '',
+  foreign_language: 'English',
   essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.',
   consent: true,
 }
@@ -83,6 +85,58 @@ describe('registrationSchema', () => {
     const result = registrationSchema.safeParse({})
     expect(result.success).toBe(false)
   })
+
+  it('rejects semester above 7', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 8 })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts semester up to 7', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 7, ipk: 3.2 })
+    expect(result.success).toBe(true)
+  })
+
+  it('requires IPK for semester 3 and above', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 4, ipk: undefined })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects IPK below 3.00 for semester 3 and above', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 5, ipk: 2.5 })
+    expect(result.success).toBe(false)
+  })
+
+  it('allows missing IPK for semester below 3', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 2, ipk: undefined })
+    expect(result.success).toBe(true)
+  })
+
+  it('enforces minimum height for Nyong (Laki-laki)', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Laki-laki', height_cm: 165 })
+    expect(result.success).toBe(false)
+  })
+
+  it('enforces minimum height for Noni (Perempuan)', () => {
+    const tooShort = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Perempuan', height_cm: 155 })
+    expect(tooShort.success).toBe(false)
+    const justRight = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Perempuan', height_cm: 160 })
+    expect(justRight.success).toBe(true)
+  })
+
+  it('rejects applicants older than 22 years (364 days) at audition', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, date_of_birth: '2000-01-01' })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts applicants within the age limit', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, date_of_birth: '2004-05-15' })
+    expect(result.success).toBe(true)
+  })
+
+  it('requires foreign language', () => {
+    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, foreign_language: '' })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('registrationStepSchema', () => {
@@ -97,7 +151,7 @@ describe('registrationStepSchema', () => {
     occupation: 'Mahasiswa', education: 'Sarjana S1',
   }
   const validStep3 = {
-    instagram: '@johndoe', tiktok: '', facebook: '',
+    instagram: '@johndoe', tiktok: '', facebook: '', foreign_language: 'English',
     essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and want to promote North Sulawesi tourism.', consent: true,
   }
 

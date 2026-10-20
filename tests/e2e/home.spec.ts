@@ -13,10 +13,10 @@ test.describe('Home Page', () => {
     await expect(page.getByRole('link', { name: /galeri/i }).first()).toBeVisible()
   })
 
-  test('should have register button', async ({ page }) => {
+  test('should have register link (open or coming soon)', async ({ page }) => {
     await page.goto('/')
-    const registerBtn = page.getByRole('link', { name: /daftar sekarang/i })
-    await expect(registerBtn.first()).toBeVisible()
+    const registerLink = page.getByRole('link', { name: /daftar sekarang|coming soon/i })
+    await expect(registerLink.first()).toBeVisible()
   })
 
   test('should navigate to about page', async ({ page }) => {
