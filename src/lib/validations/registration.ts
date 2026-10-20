@@ -202,7 +202,7 @@ export const alumniAchievementSchema = z.object({
 
 export const titleholderSchema = z.object({
   tahun: z.coerce.number().min(2000, 'Tahun minimal 2000').max(2100, 'Tahun maksimal 2100'),
-  category: z.enum(['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Digital', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'], {
+  category: z.enum(['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Intelegensia', 'Other'], {
     errorMap: () => ({ message: 'Pilih kategori' }),
   }),
   nyong_name: z
@@ -248,6 +248,7 @@ export const CURRENT_TITLE_TITLES = [
   'Nyong Duta Budaya', 'Noni Duta Budaya',
   'Nyong Duta Bahasa', 'Noni Duta Bahasa',
   'Nyong Duta Seni', 'Noni Duta Seni',
+  'Nyong Duta Pariwisata', 'Noni Duta Pariwisata',
   'Nyong Persahabatan', 'Noni Persahabatan',
   'Nyong Intelegensia', 'Noni Intelegensia',
 ] as const

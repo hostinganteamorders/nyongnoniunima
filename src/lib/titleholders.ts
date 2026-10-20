@@ -12,6 +12,7 @@ export const TITLE_PAIRS: [string, string][] = [
   ['Nyong Duta Budaya', 'Noni Duta Budaya'],
   ['Nyong Duta Bahasa', 'Noni Duta Bahasa'],
   ['Nyong Duta Seni', 'Noni Duta Seni'],
+  ['Nyong Duta Pariwisata', 'Noni Duta Pariwisata'],
   ['Nyong Persahabatan', 'Noni Persahabatan'],
   ['Nyong Intelegensia', 'Noni Intelegensia'],
 ]
@@ -43,6 +44,8 @@ export const PAIR_LABELS: Record<string, string> = {
   'Noni Duta Bahasa': 'Duta Bahasa Nyong Noni UNIMA 2025',
   'Nyong Duta Seni': 'Duta Seni Nyong Noni UNIMA 2025',
   'Noni Duta Seni': 'Duta Seni Nyong Noni UNIMA 2025',
+  'Nyong Duta Pariwisata': 'Duta Pariwisata Nyong Noni UNIMA 2026',
+  'Noni Duta Pariwisata': 'Duta Pariwisata Nyong Noni UNIMA 2026',
   'Nyong Persahabatan': 'Persahabatan Nyong Noni UNIMA 2025',
   'Noni Persahabatan': 'Persahabatan Nyong Noni UNIMA 2025',
   'Nyong Intelegensia': 'Intelegensia Nyong Noni UNIMA 2025',
