@@ -42,7 +42,7 @@ export async function getSponsors() {
 
 export async function createSponsor(data: { name: string; logo_url?: string; website?: string; type: string; sort_order?: number }) {
   await requireAdmin()
-  const parsed = sponsorSchema.safeParse(data)
+  const parsed = sponsorSchema.safeParse({ ...data, logo_url: data.logo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -60,7 +60,7 @@ export async function createSponsor(data: { name: string; logo_url?: string; web
 
 export async function updateSponsor(id: string, data: { name: string; logo_url?: string; website?: string; type: string; sort_order?: number }) {
   await requireAdmin()
-  const parsed = sponsorSchema.safeParse(data)
+  const parsed = sponsorSchema.safeParse({ ...data, logo_url: data.logo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -130,7 +130,7 @@ export async function getCurrentTitleholders() {
 
 export async function createCurrentTitleholder(data: { title: string; name: string; faculty?: string; study_program?: string; photo_url?: string; instagram?: string; biography?: string; sort_order?: number }) {
   await requireAdmin()
-  const parsed = currentTitleholderSchema.safeParse(data)
+  const parsed = currentTitleholderSchema.safeParse({ ...data, photo_url: data.photo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -148,7 +148,7 @@ export async function createCurrentTitleholder(data: { title: string; name: stri
 
 export async function updateCurrentTitleholder(id: string, data: { title?: string; name?: string; faculty?: string; study_program?: string; photo_url?: string; instagram?: string; biography?: string; sort_order?: number }) {
   await requireAdmin()
-  const parsed = currentTitleholderSchema.safeParse(data)
+  const parsed = currentTitleholderSchema.safeParse({ ...data, photo_url: data.photo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }

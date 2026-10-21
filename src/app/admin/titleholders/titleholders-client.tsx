@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Crown, Pencil, Plus, Trash2, X, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createTitleholder, updateTitleholder, deleteTitleholder } from '@/server/actions/finalists'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 
 const CATEGORIES = ['Juara Utama', 'Wakil I', 'Wakil II', 'Harapan I', 'Harapan II', 'Berbakat', 'Favorit', 'Fotogenik', 'Persahabatan', 'Duta Pariwisata', 'Duta Lingkungan', 'Duta Sosial', 'Duta Budaya', 'Duta Bahasa', 'Duta Seni', 'Duta Kesehatan', 'Duta Pendidikan', 'Intelegensia', 'Other'] as const
 
@@ -86,6 +87,16 @@ export function TitleholdersClient({ data }: { data: any[] }) {
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState<'nyong' | 'noni' | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const sessionUploads = useRef<Set<string>>(new Set())
+  const initialUrls = useRef<string[]>([])
+
+  const finishSession = async (keep: string[], includeInitial = false) => {
+    const pool = includeInitial ? [...sessionUploads.current, ...initialUrls.current] : [...sessionUploads.current]
+    const unused = pool.filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (includeInitial) initialUrls.current = []
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   const groups = groupRows(data)
 
@@ -97,6 +108,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
   }, [notification])
 
   const closeModal = () => {
+    void finishSession([])
     setShowModal(false)
     setEditRef(null)
     setForm(emptyForm)
@@ -104,6 +116,8 @@ export function TitleholdersClient({ data }: { data: any[] }) {
   }
 
   const openAdd = () => {
+    sessionUploads.current.clear()
+    initialUrls.current = []
     setEditRef(null)
     setForm(emptyForm)
     setError('')
@@ -121,6 +135,8 @@ export function TitleholdersClient({ data }: { data: any[] }) {
       photo_url: row ? (side === 'nyong' ? row.nyong_photo_url : row.noni_photo_url) || '' : '',
     })
     setEditRef({ nyongRowId: nyongRow?.id ?? null, noniRowId: noniRow?.id ?? null })
+    sessionUploads.current.clear()
+    initialUrls.current = [nyongRow?.nyong_photo_url, noniRow?.noni_photo_url].filter(Boolean)
     setForm({
       tahun: String(group.tahun),
       category: group.category,
@@ -148,6 +164,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
     setError('')
     try {
       const { url } = await uploadToStorage('titleholders', file)
+      sessionUploads.current.add(url)
       setPerson(field, { photo_url: url })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
@@ -251,6 +268,7 @@ export function TitleholdersClient({ data }: { data: any[] }) {
     }
 
     setNotification({ type: 'success', message: editRef ? 'Titleholder berhasil diperbarui' : 'Titleholder berhasil ditambahkan' })
+    await finishSession([form.nyong.photo_url, form.noni.photo_url], true)
     closeModal()
     router.refresh()
   }
@@ -395,10 +413,12 @@ export function TitleholdersClient({ data }: { data: any[] }) {
                       </span>
                     </div>
                     {uploading === side && <p className="text-xs text-muted">Mengunggah...</p>}
-                    {form[side].photo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={form[side].photo_url} alt={`Foto ${side}`} className="max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
-                    )}
+                    <PhotoPreview
+                      src={form[side].photo_url}
+                      onRemove={() => setPerson(side, { photo_url: '' })}
+                      alt={`Foto ${side}`}
+                      imgClassName="max-h-96 w-full rounded-lg border border-border bg-white object-contain"
+                    />
                   </div>
                   <div>
                     <Label>Biografi</Label>

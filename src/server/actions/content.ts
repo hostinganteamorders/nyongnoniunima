@@ -16,7 +16,8 @@ const IMAGE_TYPES: Record<string, string> = {
 
 export async function createNews(formData: FormData) {
   const { user } = await requireAdmin()
-  const raw = Object.fromEntries(formData.entries())
+  const raw: Record<string, unknown> = Object.fromEntries(formData.entries())
+  if (raw.image_url === '') raw.image_url = null
   const parsed = newsSchema.safeParse({ ...raw, published: raw.published === 'true' })
 
   if (!parsed.success) {
@@ -77,7 +78,8 @@ export async function deleteNews(id: string) {
 
 export async function createEvent(formData: FormData) {
   await requireAdmin()
-  const raw = Object.fromEntries(formData.entries())
+  const raw: Record<string, unknown> = Object.fromEntries(formData.entries())
+  if (raw.image_url === '') raw.image_url = null
   const parsed = eventSchema.safeParse({ ...raw, published: raw.published === 'true' })
 
   if (!parsed.success) {

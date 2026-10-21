@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Trash2, X, Upload } from 'lucide-react'
 import { createAlumniAchievement, deleteAlumniAchievement } from '@/server/actions/finalists'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 
@@ -24,6 +25,13 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ alumni_name: '', achievement_type: 'ASN', description: '', tahun: '', photo_url: '', instagram: '' })
   const [error, setError] = useState('')
+  const sessionUploads = useRef<Set<string>>(new Set())
+
+  const finishSession = async (keep: string[]) => {
+    const unused = [...sessionUploads.current].filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -47,6 +55,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
         setError(String(result.error))
         return
       }
+      await finishSession(form.photo_url ? [form.photo_url] : [])
       setNotification({ type: 'success', message: 'Prestasi berhasil ditambahkan' })
       setShowAdd(false)
       setForm({ alumni_name: '', achievement_type: 'ASN', description: '', tahun: '', photo_url: '', instagram: '' })
@@ -71,6 +80,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
     setError('')
     try {
       const { url } = await uploadToStorage('alumni', file)
+      sessionUploads.current.add(url)
       setForm((prev) => ({ ...prev, photo_url: url }))
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : 'Gagal mengunggah foto')
@@ -139,7 +149,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Tambah Prestasi</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowAdd(false)}><X className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => { void finishSession([]); setShowAdd(false) }}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
@@ -163,10 +173,7 @@ export function AlumniAchievementsClient({ data }: { data: any[] }) {
                     </span>
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                  {form.photo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
-                  )}
+                  <PhotoPreview src={form.photo_url} onRemove={() => setForm((prev) => ({ ...prev, photo_url: '' }))} alt="Pratinjau foto" />
                 </div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>

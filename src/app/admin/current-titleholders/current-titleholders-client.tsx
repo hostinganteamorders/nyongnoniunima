@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Plus, Pencil, Trash2, X, Crown, Upload } from 'lucide-react'
 import { createCurrentTitleholder, updateCurrentTitleholder, deleteCurrentTitleholder } from '@/server/actions/unima'
 import { CURRENT_TITLE_TITLES } from '@/lib/validations/registration'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 import { useRouter } from 'next/navigation'
 
 interface FormState {
@@ -42,6 +43,16 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const sessionUploads = useRef<Set<string>>(new Set())
+  const initialUrls = useRef<string[]>([])
+
+  const finishSession = async (keep: string[], includeInitial = false) => {
+    const pool = includeInitial ? [...sessionUploads.current, ...initialUrls.current] : [...sessionUploads.current]
+    const unused = pool.filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (includeInitial) initialUrls.current = []
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -51,6 +62,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
   }, [notification])
 
   const closeModal = () => {
+    void finishSession([])
     setShowModal(false)
     setEditId(null)
     setForm(emptyForm)
@@ -58,6 +70,8 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
   }
 
   const openAdd = () => {
+    sessionUploads.current.clear()
+    initialUrls.current = []
     setEditId(null)
     setForm(emptyForm)
     setError('')
@@ -65,6 +79,8 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
   }
 
   const openEdit = (item: any) => {
+    sessionUploads.current.clear()
+    initialUrls.current = item.photo_url ? [item.photo_url] : []
     setEditId(item.id)
     setForm({
       title: item.title || '',
@@ -93,6 +109,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
     setError('')
     try {
       const { url } = await uploadToStorage('titleholders', file)
+      sessionUploads.current.add(url)
       setForm((prev) => ({ ...prev, photo_url: url }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
@@ -129,6 +146,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
       }
 
       setNotification({ type: 'success', message: editId ? 'Data berhasil diperbarui' : 'Data berhasil ditambahkan' })
+      await finishSession(form.photo_url ? [form.photo_url] : [], true)
       closeModal()
       router.refresh()
     } catch {
@@ -250,10 +268,7 @@ export function CurrentTitleholdersClient({ data }: { data: any[] }) {
                     </span>
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                  {form.photo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.photo_url} alt="Pratinjau foto" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
-                  )}
+                  <PhotoPreview src={form.photo_url} onRemove={() => setForm((prev) => ({ ...prev, photo_url: '' }))} alt="Pratinjau foto" />
                 </div>
                 <div><Label>Instagram</Label><Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@username" /></div>
                 <div><Label>Biografi</Label><textarea className="flex h-24 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" value={form.biography} onChange={(e) => setForm({ ...form, biography: e.target.value })} /></div>

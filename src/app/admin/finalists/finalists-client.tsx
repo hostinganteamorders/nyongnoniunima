@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Search, Crown, X, FileText, Instagram, Upload } from 'lucide-react'
+import { Search, Crown, X, FileText, Instagram, Upload, Trash2 } from 'lucide-react'
 import { updateApplicantStatus } from '@/server/actions/applicants'
 import { updateFinalistData } from '@/server/actions/finalists'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -67,6 +67,16 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
   const [error, setError] = useState('')
   const [editData, setEditData] = useState<EditData | null>(null)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const sessionUploads = useRef<Set<string>>(new Set())
+  const initialUrls = useRef<string[]>([])
+
+  const finishSession = async (keep: string[], includeInitial = false) => {
+    const pool = includeInitial ? [...sessionUploads.current, ...initialUrls.current] : [...sessionUploads.current]
+    const unused = pool.filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (includeInitial) initialUrls.current = []
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -96,6 +106,8 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
   }
 
   const openEdit = (a: Applicant) => {
+    sessionUploads.current.clear()
+    initialUrls.current = a.photo_url ? [a.photo_url] : []
     setEditData({
       applicant_id: a.id,
       full_name: a.full_name,
@@ -126,6 +138,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
     setError('')
     try {
       const { url } = await uploadToStorage('finalists', file)
+      sessionUploads.current.add(url)
       if (editData) setEditData({ ...editData, photo_url: url })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengunggah foto')
@@ -143,10 +156,10 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
       return
     }
     try {
-      const data: Record<string, unknown> = { applicant_id: editData.applicant_id, tahun: editData.tahun }
+      const data: Record<string, unknown> = { applicant_id: editData.applicant_id, tahun: editData.tahun, photo_url: editData.photo_url || null }
       const fields: (keyof EditData)[] = [
         'full_name', 'email', 'phone', 'date_of_birth', 'address',
-        'city', 'province', 'occupation', 'education', 'instagram', 'bio', 'photo_url',
+        'city', 'province', 'occupation', 'education', 'instagram', 'bio',
       ]
       for (const f of fields) { if (editData[f]) data[f] = editData[f] }
       if (editData.height_cm) data.height_cm = Number(editData.height_cm)
@@ -155,6 +168,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
       const result = await updateFinalistData(data as any)
       if (result.error) { setError(result.error); return }
       setNotification({ type: 'success', message: 'Data finalis berhasil disimpan' })
+      await finishSession(editData.photo_url ? [editData.photo_url] : [], true)
       setEditData(null)
       router.refresh()
     } catch {
@@ -253,7 +267,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
           <Card className="w-full max-w-2xl my-8">
             <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10 border-b">
               <CardTitle className="text-lg">Edit Finalis: {editData.full_name}</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setEditData(null)}><X className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => { void finishSession([]); setEditData(null) }}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent className="pt-6">
               {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
@@ -273,6 +287,17 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                         {uploading ? 'Mengupload...' : 'Pilih File PNG'}
                       </Label>
                       <input id="photo-upload" type="file" accept=".png,image/png" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+                      {editData.photo_url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 text-red-600 hover:bg-red-50"
+                          onClick={() => setEditData({ ...editData, photo_url: '' })}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" /> Hapus foto
+                        </Button>
+                      )}
                       <p className="mt-1 text-xs text-muted">Hanya file PNG dengan background transparan</p>
                     </div>
                   </div>

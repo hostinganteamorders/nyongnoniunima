@@ -1,10 +1,11 @@
 'use server'
 
 import path from 'node:path'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { requireAdmin, getAdminClient } from '@/lib/supabase/admin'
 import { isUsingLocalDb } from '@/lib/db/local'
 import { UPLOAD_IMAGE_TYPES } from '@/lib/image-types'
+import { parseStorageUrl } from '@/lib/storage-url'
 
 export type StorageBucket =
   | 'titleholders'
@@ -61,4 +62,25 @@ export async function uploadLocalImage(formData: FormData, bucket: StorageBucket
   const filename = `${crypto.randomUUID()}.${extensionFor(bucket, file.type)}`
   await writeFile(path.join(uploadDir, filename), buffer)
   return { url: `/uploads/${bucket}/${filename}` }
+}
+
+export async function removeStorageFile(url: string) {
+  await requireAdmin()
+
+  const ref = parseStorageUrl(url)
+  if (!ref) return { ok: true as const }
+
+  if (isUsingLocalDb()) {
+    if (ref.path.includes('/')) return { ok: true as const }
+    try {
+      await unlink(path.join(process.cwd(), 'public', 'uploads', ref.bucket, ref.path))
+    } catch {
+      // file mungkin sudah tidak ada — abaikan
+    }
+    return { ok: true as const }
+  }
+
+  const { error } = await getAdminClient().storage.from(ref.bucket).remove([ref.path])
+  if (error) return { error: error.message }
+  return { ok: true as const }
 }

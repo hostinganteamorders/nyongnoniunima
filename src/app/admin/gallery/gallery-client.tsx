@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus, Trash2, X, Search, LayoutGrid, List, Upload } from 'lucide-react'
 import { createGalleryItem, deleteGalleryItem } from '@/server/actions/content'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 import { useRouter } from 'next/navigation'
 
 interface GalleryItem {
@@ -28,6 +29,13 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ title: '', description: '', image_url: '', category: '' })
+  const sessionUploads = useRef<Set<string>>(new Set())
+
+  const finishSession = async (keep: string[]) => {
+    const unused = [...sessionUploads.current].filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -59,6 +67,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       const fd = new FormData()
       Object.entries(form).forEach(([k, v]) => fd.append(k, v))
       await createGalleryItem(fd)
+      await finishSession([form.image_url])
       setNotification({ type: 'success', message: 'Foto berhasil ditambahkan' })
       setShowAdd(false)
       setForm({ title: '', description: '', image_url: '', category: '' })
@@ -82,6 +91,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
     setUploading(true)
     try {
       const { url } = await uploadToStorage('gallery', file)
+      sessionUploads.current.add(url)
       setForm((prev) => ({ ...prev, image_url: url }))
       setNotification({ type: 'success', message: 'Foto berhasil diunggah' })
     } catch (err) {
@@ -195,7 +205,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Tambah Foto</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowAdd(false)}><X className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => { void finishSession([]); setShowAdd(false) }}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
@@ -209,10 +219,7 @@ export function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                     </span>
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                  {form.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.image_url} alt="Pratinjau" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
-                  )}
+                  <PhotoPreview src={form.image_url} onRemove={() => setForm((prev) => ({ ...prev, image_url: '' }))} alt="Pratinjau" />
                 </div>
                 <div><Label>Kategori</Label><Input required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
                 <div><Label>Deskripsi</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>

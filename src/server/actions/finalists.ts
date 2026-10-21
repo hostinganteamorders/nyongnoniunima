@@ -200,12 +200,12 @@ export async function updateFinalistData(data: {
   occupation?: string
   education?: string
   instagram?: string
-  photo_url?: string
+  photo_url?: string | null
   bio?: string
   tahun: string
 }) {
   await requireAdmin()
-  const parsed = finalistUpdateSchema.safeParse(data)
+  const parsed = finalistUpdateSchema.safeParse({ ...data, photo_url: data.photo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -308,7 +308,7 @@ export async function uploadTitleholderPhoto(formData: FormData) {
 // Admin: hall of fame CRUD
 export async function createHallOfFame(data: { tahun: number; nyong_name: string; noni_name: string; nyong_photo_url?: string; noni_photo_url?: string; kabupaten_kota: string }) {
   await requireAdmin()
-  const parsed = hallOfFameSchema.safeParse(data)
+  const parsed = hallOfFameSchema.safeParse({ ...data, nyong_photo_url: data.nyong_photo_url || null, noni_photo_url: data.noni_photo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -339,7 +339,7 @@ export async function deleteHallOfFame(id: string) {
 // Admin: alumni achievement CRUD
 export async function createAlumniAchievement(data: { alumni_name: string; achievement_type: string; description: string; tahun: string; photo_url?: string; instagram?: string }) {
   await requireAdmin()
-  const parsed = alumniAchievementSchema.safeParse(data)
+  const parsed = alumniAchievementSchema.safeParse({ ...data, photo_url: data.photo_url || null })
   if (!parsed.success) {
     return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
   }
@@ -402,6 +402,8 @@ export async function createTitleholder(data: Record<string, unknown>) {
   await requireAdmin()
   const parsed = titleholderSchema.safeParse({
     ...data,
+    nyong_photo_url: data.nyong_photo_url || null,
+    noni_photo_url: data.noni_photo_url || null,
     sort_order: TITLEHOLDER_CATEGORY_ORDER[data.category as string] || 99,
   })
 
@@ -449,6 +451,8 @@ export async function updateTitleholder(id: string, data: Record<string, unknown
   await requireAdmin()
   const parsed = titleholderSchema.safeParse({
     ...data,
+    nyong_photo_url: data.nyong_photo_url || null,
+    noni_photo_url: data.noni_photo_url || null,
     sort_order: TITLEHOLDER_CATEGORY_ORDER[data.category as string] || 99,
   })
 

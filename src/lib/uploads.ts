@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { createSignedUpload, uploadLocalImage, type StorageBucket } from '@/server/actions/uploads'
+import { createSignedUpload, uploadLocalImage, removeStorageFile, type StorageBucket } from '@/server/actions/uploads'
 
 const NETWORKISH = /failed to fetch|networkerror|network error|load failed|fetch failed|network connection|aborted/i
 
@@ -74,4 +74,17 @@ export async function uploadToStorage(bucket: StorageBucket, file: File): Promis
     console.error('[uploadToStorage]', bucket, err)
     throw friendlyUploadError(err)
   }
+}
+
+export async function cleanupUnusedUploads(urls: Array<string | null | undefined>) {
+  const unique = [...new Set(urls.filter((u): u is string => !!u))]
+  await Promise.all(
+    unique.map(async (url) => {
+      try {
+        await removeStorageFile(url)
+      } catch (err) {
+        console.error('[cleanupUnusedUploads]', url, err)
+      }
+    }),
+  )
 }

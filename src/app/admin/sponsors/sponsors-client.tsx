@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Pencil, Trash2, X, Search, Upload } from 'lucide-react'
 import { createSponsor, updateSponsor, deleteSponsor } from '@/server/actions/unima'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 import { useRouter } from 'next/navigation'
 
 const TYPE_COLORS: Record<string, 'default' | 'accent' | 'success' | 'secondary'> = {
@@ -49,6 +50,16 @@ export function SponsorsClient({ data }: { data: any[] }) {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [error, setError] = useState('')
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const sessionUploads = useRef<Set<string>>(new Set())
+  const initialUrls = useRef<string[]>([])
+
+  const finishSession = async (keep: string[], includeInitial = false) => {
+    const pool = includeInitial ? [...sessionUploads.current, ...initialUrls.current] : [...sessionUploads.current]
+    const unused = pool.filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (includeInitial) initialUrls.current = []
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -64,6 +75,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
   )
 
   const closeModal = () => {
+    void finishSession([])
     setShowAdd(false)
     setEditId(null)
     setForm(emptyForm)
@@ -89,6 +101,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
         setError(String(result.error))
         return
       }
+      await finishSession(form.logo_url ? [form.logo_url] : [], true)
       setNotification({
         type: 'success',
         message: editId ? 'Sponsor berhasil diperbarui' : 'Sponsor berhasil ditambahkan',
@@ -107,6 +120,8 @@ export function SponsorsClient({ data }: { data: any[] }) {
 
   const handleEdit = (item: any) => {
     setEditId(item.id)
+    initialUrls.current = item.logo_url ? [item.logo_url] : []
+    sessionUploads.current.clear()
     setForm({
       name: item.name || '',
       logo_url: item.logo_url || '',
@@ -131,6 +146,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
     setError('')
     try {
       const { url } = await uploadToStorage('sponsors', file)
+      sessionUploads.current.add(url)
       setForm((prev) => ({ ...prev, logo_url: url }))
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : 'Gagal mengunggah logo')
@@ -158,7 +174,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
           <h1 className="text-2xl font-bold text-dark-text">Sponsor</h1>
           <p className="text-sm text-muted mt-1">Kelola sponsor, partner, dan media</p>
         </div>
-        <Button onClick={() => setShowAdd(true)}><Plus className="mr-2 h-4 w-4" />Tambah</Button>
+        <Button onClick={() => { sessionUploads.current.clear(); initialUrls.current = []; setShowAdd(true) }}><Plus className="mr-2 h-4 w-4" />Tambah</Button>
       </div>
 
       {notification && (
@@ -248,8 +264,12 @@ export function SponsorsClient({ data }: { data: any[] }) {
                   </div>
                   {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
                   {form.logo_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.logo_url} alt="Pratinjau logo" className="mt-2 h-20 w-auto max-w-full rounded-lg border border-border object-contain" />
+                    <PhotoPreview
+                      src={form.logo_url}
+                      onRemove={() => setForm((prev) => ({ ...prev, logo_url: '' }))}
+                      alt="Pratinjau logo"
+                      imgClassName="mt-2 h-20 w-auto max-w-full rounded-lg border border-border object-contain"
+                    />
                   )}
                 </div>
                 <div><Label>Website</Label><Input type="url" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://..." /></div>

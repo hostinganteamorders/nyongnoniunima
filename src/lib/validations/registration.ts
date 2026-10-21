@@ -174,7 +174,7 @@ export const finalistUpdateSchema = z.object({
   occupation: z.string().min(3, 'Pekerjaan harus diisi').optional(),
   education: z.string().min(3, 'Pendidikan harus diisi').optional(),
   instagram: z.string().optional(),
-  photo_url: z.string().optional(),
+  photo_url: z.string().nullable().optional(),
   bio: z.string().optional(),
   tahun: z.string().min(4, 'Tahun harus diisi'),
 })
@@ -183,8 +183,8 @@ export const hallOfFameSchema = z.object({
   tahun: z.coerce.number().min(2000, 'Tahun minimal 2000').max(2100, 'Tahun maksimal 2100'),
   nyong_name: z.string().min(3, 'Nama Nyong minimal 3 karakter'),
   noni_name: z.string().min(3, 'Nama Noni minimal 3 karakter'),
-  nyong_photo_url: z.string().optional(),
-  noni_photo_url: z.string().optional(),
+  nyong_photo_url: z.string().nullable().optional(),
+  noni_photo_url: z.string().nullable().optional(),
   kabupaten_kota: z.string().min(3, 'Kabupaten/Kota harus diisi'),
   category: z.string().optional(),
 })
@@ -194,7 +194,7 @@ export const alumniAchievementSchema = z.object({
   achievement_type: z.string().min(1, 'Tipe prestasi harus diisi'),
   description: z.string().min(10, 'Deskripsi minimal 10 karakter'),
   tahun: z.string().min(4, 'Tahun harus diisi'),
-  photo_url: z.string().optional(),
+  photo_url: z.string().nullable().optional(),
   instagram: z.string().optional(),
   current_position: z.string().optional(),
   organization: z.string().optional(),
@@ -228,7 +228,7 @@ export const titleholderSchema = z.object({
 
 export const sponsorSchema = z.object({
   name: z.string().min(3, 'Nama minimal 3 karakter'),
-  logo_url: z.string().optional(),
+  logo_url: z.string().nullable().optional(),
   website: z.string().optional(),
   type: z.enum(['sponsor', 'partner', 'media'], { errorMap: () => ({ message: 'Pilih tipe' }) }),
   sort_order: z.coerce.number().int().default(0),
@@ -260,7 +260,7 @@ export const currentTitleholderSchema = z.object({
   name: z.string().min(3, 'Nama minimal 3 karakter'),
   faculty: z.string().optional(),
   study_program: z.string().optional(),
-  photo_url: z.string().optional(),
+  photo_url: z.string().nullable().optional(),
   instagram: z.string().optional(),
   biography: z.string().optional(),
   sort_order: z.coerce.number().int().default(0),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, X, Search, Upload } from 'lucide-react'
 import { createEvent, deleteEvent } from '@/server/actions/content'
-import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
+import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
+import { PhotoPreview } from '@/components/admin/photo-preview'
 import { useRouter } from 'next/navigation'
 
 interface EventItem {
@@ -33,6 +34,13 @@ export function EventsClient({ events }: { events: EventItem[] }) {
   const [uploading, setUploading] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({ title: '', slug: '', description: '', date: '', location: '', category: 'Kegiatan Sosial', image_url: '', published: false })
+  const sessionUploads = useRef<Set<string>>(new Set())
+
+  const finishSession = async (keep: string[]) => {
+    const unused = [...sessionUploads.current].filter((u) => !keep.includes(u))
+    sessionUploads.current.clear()
+    if (unused.length) await cleanupUnusedUploads(unused)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -60,6 +68,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
       Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
       const res = await createEvent(fd)
       if (res?.error) throw new Error(res.error)
+      await finishSession(form.image_url ? [form.image_url] : [])
       setNotification({ type: 'success', message: 'Acara berhasil ditambahkan' })
       setShowAdd(false)
       setForm({ title: '', slug: '', description: '', date: '', location: '', category: 'Kegiatan Sosial', image_url: '', published: false })
@@ -83,6 +92,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
     setUploading(true)
     try {
       const { url } = await uploadToStorage('events', file)
+      sessionUploads.current.add(url)
       setForm((prev) => ({ ...prev, image_url: url }))
       setNotification({ type: 'success', message: 'Gambar berhasil diunggah' })
     } catch (err) {
@@ -172,7 +182,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Tambah Acara</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowAdd(false)}><X className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => { void finishSession([]); setShowAdd(false) }}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
@@ -207,10 +217,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
                       </span>
                     </div>
                     {uploading && <p className="mt-1 text-xs text-muted">Mengunggah...</p>}
-                    {form.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={form.image_url} alt="Pratinjau" className="mt-2 max-h-96 w-full rounded-lg border border-border bg-white object-contain" />
-                    )}
+                    <PhotoPreview src={form.image_url} onRemove={() => setForm((prev) => ({ ...prev, image_url: '' }))} alt="Pratinjau" />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
