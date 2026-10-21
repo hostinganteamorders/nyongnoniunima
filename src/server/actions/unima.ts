@@ -58,6 +58,25 @@ export async function createSponsor(data: { name: string; logo_url?: string; web
   return { data: result }
 }
 
+export async function updateSponsor(id: string, data: { name: string; logo_url?: string; website?: string; type: string; sort_order?: number }) {
+  await requireAdmin()
+  const parsed = sponsorSchema.safeParse(data)
+  if (!parsed.success) {
+    return { error: Object.entries(parsed.error.flatten().fieldErrors).map(([f, e]) => `${f}: ${(e as string[]).join(', ')}`).join('; ') }
+  }
+  const updatedAt = new Date().toISOString()
+  if (isUsingLocalDb()) {
+    localUpdate('sponsors', id, { ...parsed.data, updated_at: updatedAt })
+    revalidatePath('/admin/sponsors'); revalidatePath('/')
+    return { data: parsed.data }
+  }
+  const adminClient = getAdminClient()
+  const { data: result, error } = await adminClient.from('sponsors').update({ ...parsed.data, updated_at: updatedAt }).eq('id', id).select().single()
+  if (error) return { error: error.message }
+  revalidatePath('/admin/sponsors'); revalidatePath('/')
+  return { data: result }
+}
+
 export async function deleteSponsor(id: string) {
   await requireAdmin()
   if (isUsingLocalDb()) { localDelete('sponsors', id); revalidatePath('/admin/sponsors'); return }

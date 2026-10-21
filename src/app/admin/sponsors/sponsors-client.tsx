@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, X, Search, Upload } from 'lucide-react'
-import { createSponsor, deleteSponsor } from '@/server/actions/unima'
+import { Plus, Pencil, Trash2, X, Search, Upload } from 'lucide-react'
+import { createSponsor, updateSponsor, deleteSponsor } from '@/server/actions/unima'
 import { uploadToStorage, ensureAdminSession } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 
@@ -43,6 +43,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -62,6 +63,13 @@ export function SponsorsClient({ data }: { data: any[] }) {
       item.type?.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const closeModal = () => {
+    setShowAdd(false)
+    setEditId(null)
+    setForm(emptyForm)
+    setError('')
+  }
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -72,23 +80,42 @@ export function SponsorsClient({ data }: { data: any[] }) {
       return
     }
     try {
-      const result = await createSponsor({
+      const payload = {
         ...form,
         sort_order: Number(form.sort_order),
-      } as any)
+      } as any
+      const result = editId ? await updateSponsor(editId, payload) : await createSponsor(payload)
       if (result?.error) {
         setError(String(result.error))
         return
       }
-      setNotification({ type: 'success', message: 'Sponsor berhasil ditambahkan' })
-      setShowAdd(false)
-      setForm(emptyForm)
+      setNotification({
+        type: 'success',
+        message: editId ? 'Sponsor berhasil diperbarui' : 'Sponsor berhasil ditambahkan',
+      })
+      closeModal()
       router.refresh()
     } catch {
-      setNotification({ type: 'error', message: 'Gagal menambahkan sponsor' })
+      setNotification({
+        type: 'error',
+        message: editId ? 'Gagal memperbarui sponsor' : 'Gagal menambahkan sponsor',
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEdit = (item: any) => {
+    setEditId(item.id)
+    setForm({
+      name: item.name || '',
+      logo_url: item.logo_url || '',
+      website: item.website || '',
+      type: item.type || 'sponsor',
+      sort_order: String(item.sort_order ?? 0),
+    })
+    setError('')
+    setShowAdd(true)
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,9 +210,14 @@ export function SponsorsClient({ data }: { data: any[] }) {
                       </td>
                       <td className="py-3 text-muted hidden lg:table-cell">{item.sort_order ?? 0}</td>
                       <td className="py-3 text-right">
-                        <Button variant="ghost" size="icon" className="text-red-600" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="text-primary-blue hover:text-primary-blue-dark" onClick={() => handleEdit(item)} aria-label={`Edit ${item.name}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-red-600" onClick={() => handleDelete(item.id)} aria-label={`Hapus ${item.name}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -200,8 +232,8 @@ export function SponsorsClient({ data }: { data: any[] }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Tambah Sponsor</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowAdd(false)}><X className="h-4 w-4" /></Button>
+              <CardTitle className="text-lg">{editId ? 'Edit Sponsor' : 'Tambah Sponsor'}</CardTitle>
+              <Button variant="ghost" size="icon" onClick={closeModal}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
@@ -231,7 +263,7 @@ export function SponsorsClient({ data }: { data: any[] }) {
                 </div>
                 <div><Label>Sort Order</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : 'Simpan'}</Button>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Menyimpan...' : editId ? 'Simpan Perubahan' : 'Simpan'}</Button>
               </form>
             </CardContent>
           </Card>
