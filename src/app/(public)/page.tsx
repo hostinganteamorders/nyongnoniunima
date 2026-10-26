@@ -5,6 +5,7 @@ import { Countdown } from '@/components/countdown'
 import { FinalistsCarousel } from '@/components/finalists-carousel'
 import { TitleholdersGrid } from '@/components/titleholders-grid'
 import { TahapanPemilihan } from '@/components/tahapan'
+import { SHOW_SCHEDULE_DATES } from '@/lib/site-config'
 import { getPublicFinalists } from '@/server/actions/finalists'
 import { getPublicNews, getPublicEvents } from '@/server/actions/content'
 import { getCurrentTitleholders, getFaculties, getSponsors, isRegistrationOpen } from '@/server/actions/unima'
@@ -94,14 +95,16 @@ export default async function HomePage() {
       )}
 
       {/* ─── COUNTDOWN ─── */}
-      <section className="py-section bg-primary-blue">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <span className="text-caption text-accent uppercase tracking-widest">Hitung Mundur Grand Final</span>
-          <div className="mt-6">
-            <Countdown targetDate="2026-11-26T19:00:00" />
+      {SHOW_SCHEDULE_DATES && (
+        <section className="py-section bg-primary-blue">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+            <span className="text-caption text-accent uppercase tracking-widest">Hitung Mundur Grand Final</span>
+            <div className="mt-6">
+              <Countdown targetDate="2026-11-26T19:00:00" />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── TAHAPAN PEMILIHAN ─── */}
       <TahapanPemilihan />

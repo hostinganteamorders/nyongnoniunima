@@ -1,4 +1,5 @@
 import { CalendarDays, MapPin } from 'lucide-react'
+import { SHOW_SCHEDULE_DATES } from '@/lib/site-config'
 
 interface Tahap {
   no: number
@@ -59,7 +60,7 @@ const TAHAPAN: Tahap[] = [
   },
 ]
 
-export function TahapanPemilihan() {
+export function TahapanPemilihan({ showDates = SHOW_SCHEDULE_DATES }: { showDates?: boolean }) {
   return (
     <section id="tahapan" className="py-section bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -86,12 +87,14 @@ export function TahapanPemilihan() {
               </div>
               <p className="flex-1 text-body-sm leading-relaxed text-dark-secondary">{t.deskripsi}</p>
               <div className="mt-5 space-y-2 border-t border-border pt-4">
-                <p className="flex items-start gap-2 text-body-sm text-dark-text">
-                  <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary-blue" />
-                  <span>
-                    <span className="font-semibold">Waktu:</span> {t.waktu}
-                  </span>
-                </p>
+                {showDates && (
+                  <p className="flex items-start gap-2 text-body-sm text-dark-text">
+                    <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary-blue" />
+                    <span>
+                      <span className="font-semibold">Waktu:</span> {t.waktu}
+                    </span>
+                  </p>
+                )}
                 <p className="flex items-start gap-2 text-body-sm text-dark-text">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-blue" />
                   <span>
