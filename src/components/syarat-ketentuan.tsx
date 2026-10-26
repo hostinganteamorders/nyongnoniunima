@@ -12,7 +12,7 @@ const SYARAT: string[] = [
   'Sehat secara jasmani dan rohani',
   'Belum menikah',
   'Tidak bertato',
-  'Memiliki tubuh proporsional dengan tinggi badan: Nyong 170 cm, Noni 160 cm',
+  'Mencantumkan tinggi dan berat badan sesuai kondisi sebenarnya',
 ]
 
 export function SyaratKetentuan() {

@@ -9,9 +9,6 @@ export const auditionDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tangg
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   }, 'Tanggal audisi tidak valid')
 
-// Tinggi badan minimal per peran (dari Syarat & Ketentuan).
-const MIN_HEIGHT: Record<string, number> = { 'Laki-laki': 170, Perempuan: 160 }
-
 // Terima string kosong / undefined → undefined, selain itu Number(...).
 const _ipkPreprocess = (v: unknown) =>
   v === '' || v === null || v === undefined ? undefined : Number(v)
@@ -35,8 +32,8 @@ const registrationFields = z
     address: z.string().min(10, 'Alamat minimal 10 karakter'),
     city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
     province: z.string().min(3, 'Provinsi harus diisi'),
-    height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
-    weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
+    height_cm: z.coerce.number().positive('Tinggi badan harus lebih dari 0 cm').finite('Tinggi badan harus berupa angka terbatas'),
+    weight_kg: z.coerce.number().positive('Berat badan harus lebih dari 0 kg').finite('Berat badan harus berupa angka terbatas'),
     occupation: z.string().min(3, 'Pekerjaan harus diisi'),
     education: z.string().min(3, 'Pendidikan harus diisi'),
     instagram: z.string().optional(),
@@ -61,18 +58,6 @@ function createRegistrationRefinement(auditionStart: string) {
           code: z.ZodIssueCode.custom,
           path: ['date_of_birth'],
           message: 'Usia maksimal 22 tahun (364 hari) saat audisi',
-        })
-      }
-    }
-
-    // Tinggi badan minimal per peran: Nyong (Laki-laki) 170 cm, Noni (Perempuan) 160 cm.
-    if (data.gender && typeof data.height_cm === 'number') {
-      const minHeight = MIN_HEIGHT[data.gender] ?? 160
-      if (data.height_cm < minHeight) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['height_cm'],
-          message: `Tinggi badan minimal ${minHeight} cm untuk ${data.gender === 'Laki-laki' ? 'Nyong' : 'Noni'}`,
         })
       }
     }
@@ -123,8 +108,8 @@ export const registrationStepSchema = [
     address: z.string().min(10, 'Alamat minimal 10 karakter'),
     city: z.string().min(3, 'Kabupaten/Kota harus diisi'),
     province: z.string().min(3, 'Provinsi harus diisi'),
-    height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm'),
-    weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg'),
+    height_cm: registrationFields.shape.height_cm,
+    weight_kg: registrationFields.shape.weight_kg,
     occupation: z.string().min(3, 'Pekerjaan harus diisi'),
     education: z.string().min(3, 'Pendidikan harus diisi'),
   }),
@@ -142,8 +127,7 @@ export function createRegistrationStepSchema(auditionStart: string) {
   const refine = createRegistrationRefinement(auditionStart)
   return [
     registrationStepSchema[0].superRefine(refine),
-    // Gender is supplied from biodata to retain the role-specific height rule.
-    registrationStepSchema[1].extend({ gender: registrationFields.shape.gender.optional() }).superRefine(refine),
+    registrationStepSchema[1],
     registrationStepSchema[2],
   ] as const
 }
@@ -192,8 +176,8 @@ export const finalistUpdateSchema = z.object({
   address: z.string().min(10, 'Alamat minimal 10 karakter').optional(),
   city: z.string().min(3, 'Kota harus diisi').optional(),
   province: z.string().min(3, 'Provinsi harus diisi').optional(),
-  height_cm: z.coerce.number().min(140, 'Tinggi badan minimal 140 cm').max(220, 'Tinggi badan maksimal 220 cm').optional(),
-  weight_kg: z.coerce.number().min(35, 'Berat badan minimal 35 kg').max(150, 'Berat badan maksimal 150 kg').optional(),
+  height_cm: registrationFields.shape.height_cm.optional(),
+  weight_kg: registrationFields.shape.weight_kg.optional(),
   occupation: z.string().min(3, 'Pekerjaan harus diisi').optional(),
   education: z.string().min(3, 'Pendidikan harus diisi').optional(),
   instagram: z.string().optional(),

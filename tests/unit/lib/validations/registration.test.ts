@@ -64,21 +64,6 @@ describe('registrationSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects height below minimum', () => {
-    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, height_cm: 100 })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects height above maximum', () => {
-    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, height_cm: 250 })
-    expect(result.success).toBe(false)
-  })
-
-  it('rejects weight below minimum', () => {
-    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, weight_kg: 20 })
-    expect(result.success).toBe(false)
-  })
-
   it('rejects consent false', () => {
     const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, consent: false })
     expect(result.success).toBe(false)
@@ -112,18 +97,6 @@ describe('registrationSchema', () => {
   it('allows missing IPK for semester below 3', () => {
     const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, semester: 2, ipk: undefined })
     expect(result.success).toBe(true)
-  })
-
-  it('enforces minimum height for Nyong (Laki-laki)', () => {
-    const result = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Laki-laki', height_cm: 165 })
-    expect(result.success).toBe(false)
-  })
-
-  it('enforces minimum height for Noni (Perempuan)', () => {
-    const tooShort = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Perempuan', height_cm: 155 })
-    expect(tooShort.success).toBe(false)
-    const justRight = registrationSchema.safeParse({ ...BASE_REGISTRATION, gender: 'Perempuan', height_cm: 160 })
-    expect(justRight.success).toBe(true)
   })
 
   it('rejects applicants older than 22 years (364 days) at audition', () => {
@@ -234,7 +207,7 @@ describe('date-aware registration rules', () => {
     expect(createRegistrationSchema('2027-10-26').safeParse(data).success).toBe(false)
   })
 
-  it('keeps semester, IPK and role-specific height requirements in dynamic steps', () => {
+  it('keeps semester, IPK and consent requirements in dynamic steps', () => {
     const steps = createRegistrationStepSchema('2027-10-26')
     const data = { ...BASE_REGISTRATION, date_of_birth: '2005-05-15' }
     expect(steps[0].safeParse({ ...data, semester: 7 }).success).toBe(true)
@@ -242,9 +215,6 @@ describe('date-aware registration rules', () => {
     expect(steps[0].safeParse({ ...data, semester: 2, ipk: undefined }).success).toBe(true)
     expect(steps[0].safeParse({ ...data, semester: 3, ipk: undefined }).success).toBe(false)
     expect(steps[0].safeParse({ ...data, semester: 3, ipk: 2.99 }).success).toBe(false)
-    expect(steps[1].safeParse({ ...data, height_cm: 169 }).success).toBe(false)
-    expect(steps[1].safeParse({ ...data, gender: 'Perempuan', height_cm: 160 }).success).toBe(true)
-    expect(steps[1].safeParse({ ...data, gender: 'Perempuan', height_cm: 159 }).success).toBe(false)
     expect(steps[2].safeParse({ ...data, consent: false }).success).toBe(false)
   })
 
@@ -256,6 +226,41 @@ describe('date-aware registration rules', () => {
   it('accepts a real leap day in both factories', () => {
     expect(() => createRegistrationSchema('2028-02-29')).not.toThrow()
     expect(() => createRegistrationStepSchema('2028-02-29')).not.toThrow()
+  })
+})
+
+describe.each([
+  ['registration', registrationSchema],
+  ['dynamic registration', createRegistrationSchema('2027-10-26')],
+  ['physical step', registrationStepSchema[1]],
+  ['dynamic physical step', createRegistrationStepSchema('2027-10-26')[1]],
+] as const)('%s measurements', (_name, schema) => {
+  const validData = { ...BASE_REGISTRATION, date_of_birth: '2005-05-15' }
+
+  it.each(['Laki-laki', 'Perempuan'])('accepts positive measurements outside former limits for %s', (gender) => {
+    for (const measurements of [
+      { height_cm: 100, weight_kg: 20 },
+      { height_cm: 250, weight_kg: 200 },
+      { height_cm: 169, weight_kg: 60 },
+      { height_cm: 159, weight_kg: 60 },
+      { height_cm: 0.5, weight_kg: 0.5 },
+    ]) {
+      expect(schema.safeParse({ ...validData, gender, ...measurements }).success).toBe(true)
+    }
+  })
+
+  it('coerces positive numeric strings', () => {
+    const result = schema.safeParse({ ...validData, height_cm: '100.5', weight_kg: '200.5' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toMatchObject({ height_cm: 100.5, weight_kg: 200.5 })
+  })
+
+  describe.each(['height_cm', 'weight_kg'])('%s', (field) => {
+    it.each(['', ' ', 0, '0', -1, '-1', NaN, 'NaN', Infinity, 'Infinity', -Infinity, '-Infinity', undefined, null, 'invalid'])('rejects invalid measurement %s', (value) => {
+      const result = schema.safeParse({ ...validData, [field]: value })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.flatten().fieldErrors).toHaveProperty(field)
+    })
   })
 })
 
@@ -296,6 +301,34 @@ describe('finalistUpdateSchema', () => {
       instagram: '@johndoe', photo_url: 'https://example.com/photo.jpg', bio: 'Finalis 2026', tahun: '2026',
     })
     expect(result.success).toBe(true)
+  })
+
+  it.each([
+    { height_cm: 100, weight_kg: 20 },
+    { height_cm: 250, weight_kg: 200 },
+    { height_cm: 0.5, weight_kg: 0.5 },
+    { height_cm: '100.5', weight_kg: '200.5' },
+  ])('accepts positive measurements without former bounds: %j', (measurements) => {
+    const result = finalistUpdateSchema.safeParse({ applicant_id: 'abc-123', tahun: '2026', ...measurements })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.height_cm).toBe(Number(measurements.height_cm))
+      expect(result.data.weight_kg).toBe(Number(measurements.weight_kg))
+    }
+  })
+
+  describe.each(['height_cm', 'weight_kg'])('%s', (field) => {
+    it('allows an omitted measurement while updating the other', () => {
+      const otherField = field === 'height_cm' ? 'weight_kg' : 'height_cm'
+      const result = finalistUpdateSchema.safeParse({ applicant_id: 'abc-123', tahun: '2026', [field]: undefined, [otherField]: 0.5 })
+      expect(result.success).toBe(true)
+    })
+
+    it.each(['', ' ', 0, '0', -1, '-1', NaN, 'NaN', Infinity, 'Infinity', -Infinity, '-Infinity', null, 'invalid'])('rejects invalid supplied measurement %s', (value) => {
+      const result = finalistUpdateSchema.safeParse({ applicant_id: 'abc-123', tahun: '2026', [field]: value })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.flatten().fieldErrors).toHaveProperty(field)
+    })
   })
 
   it('rejects missing applicant_id', () => {

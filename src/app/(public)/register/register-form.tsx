@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { submitRegistration } from '@/server/actions/applicants'
 import { getFaculties, getStudyPrograms } from '@/server/actions/unima'
 import {
   createRegistrationSchema,
@@ -75,6 +74,8 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
   const [filteredPrograms, setFilteredPrograms] = useState<StudyProgram[]>([])
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const submissionInFlight = useRef(false)
+  const submission = useRef<{ id: string; payload: string } | null>(null)
 
   useEffect(() => {
     getFaculties().then(setFaculties).catch(() => {})
@@ -150,20 +151,49 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
   }
 
   const onSubmit = async (data: RegistrationInput) => {
+    if (submissionInFlight.current || stepRef.current === STEPS.length) return
+    submissionInFlight.current = true
     setSubmitError('')
-    for (let i = 0; i < 3; i++) {
-      const valid = await validateStep(i)
-      if (!valid) { setStep(i); setSubmitError(`Lengkapi data pada langkah "${STEPS[i].title}" terlebih dahulu`); return }
-    }
     setSubmitting(true)
     try {
+      for (let i = 0; i < 3; i++) {
+        const valid = await validateStep(i)
+        if (!valid) { setStep(i); setSubmitError(`Lengkapi data pada langkah "${STEPS[i].title}" terlebih dahulu`); return }
+      }
+      const payload = JSON.stringify(data)
+      if (!submission.current || submission.current.payload !== payload) {
+        submission.current = { id: crypto.randomUUID(), payload }
+      }
       const formData = new FormData()
-      Object.entries(data).forEach(([key, value]) => { formData.append(key, String(value)) })
-      const result = await submitRegistration(formData)
-      if (result?.error) { setSubmitError(String(result.error)); return }
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) formData.append(key, String(value))
+      })
+      formData.append('submission_id', submission.current.id)
+      const response = await fetch('/api/register', { method: 'POST', headers: { Accept: 'application/json' }, body: formData })
+      const result: unknown = await response.json()
+      if (!result || typeof result !== 'object') throw new Error('Invalid registration response')
+      if ('error' in result && typeof result.error === 'string' && result.error) {
+        setSubmitError(result.error)
+        return
+      }
+      if (!response.ok || !('data' in result) || !result.data || typeof result.data !== 'object'
+        || !('id' in result.data) || typeof result.data.id !== 'string' || !result.data.id) {
+        throw new Error('Missing registration acknowledgement')
+      }
       setStep(STEPS.length)
-    } catch { setSubmitError('Terjadi kesalahan. Silakan coba lagi.') }
-    finally { setSubmitting(false) }
+    } catch (error) {
+      console.error('Registration request error', { name: error instanceof Error ? error.name : 'UnknownError' })
+      setSubmitError('Respons pengiriman belum dapat dikonfirmasi. Data mungkin sudah tersimpan. Periksa koneksi, lalu coba lagi dari halaman yang sama tanpa mengubah data.')
+    } finally {
+      submissionInFlight.current = false
+      setSubmitting(false)
+    }
+  }
+
+  const onInvalid = (invalid: FieldErrors<RegistrationInput>) => {
+    const invalidStep = [0, 1, 2].find((index) => fieldsByStep[index].some((field) => invalid[field]))
+    if (invalidStep !== undefined) setStep(invalidStep)
+    setSubmitError(invalidStep === undefined ? 'Periksa kembali data pendaftaran.' : `Lengkapi data pada langkah "${STEPS[invalidStep].title}" terlebih dahulu`)
   }
 
   return (
@@ -202,11 +232,11 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
 
             <form
               onSubmit={(e) => {
-                if (stepRef.current < STEPS.length - 1) {
+                if (stepRef.current !== STEPS.length - 1 || submissionInFlight.current) {
                   e.preventDefault()
                   return
                 }
-                handleSubmit(onSubmit)(e)
+                void handleSubmit(onSubmit, onInvalid)(e)
               }}
               className="space-y-6"
             >
@@ -246,8 +276,8 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
                     <Input id="province" label="Provinsi" placeholder="Provinsi" error={errors.province?.message} {...register('province')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Input id="height_cm" type="number" label="Tinggi Badan (cm)" placeholder="170" hint="Minimal 170 cm (Nyong) / 160 cm (Noni)" error={errors.height_cm?.message} {...register('height_cm')} />
-                    <Input id="weight_kg" type="number" label="Berat Badan (kg)" placeholder="60" error={errors.weight_kg?.message} {...register('weight_kg')} />
+                    <Input id="height_cm" type="number" step="any" label="Tinggi Badan (cm)" placeholder="170" hint="Isi sesuai tinggi badan saat ini" error={errors.height_cm?.message} {...register('height_cm')} />
+                    <Input id="weight_kg" type="number" step="any" label="Berat Badan (kg)" placeholder="60" hint="Isi sesuai berat badan saat ini" error={errors.weight_kg?.message} {...register('weight_kg')} />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     <Input id="occupation" label="Pekerjaan" placeholder="Mahasiswa / dll" error={errors.occupation?.message} {...register('occupation')} />
@@ -321,7 +351,7 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
                 </div>
               )}
 
-              {submitError && <p className="text-center text-sm text-error">{submitError}</p>}
+              {submitError && <p role="alert" className="text-center text-sm text-error">{submitError}</p>}
 
               {/* Navigation */}
               <div className="flex justify-between pt-6 border-t border-border mt-8">
@@ -333,7 +363,7 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
                   </div>
                 ) : (
                   <>
-                    <Button type="button" variant="ghost" onClick={prevStep} disabled={step === 0} className="text-dark-secondary border border-border">
+                    <Button type="button" variant="ghost" onClick={prevStep} disabled={step === 0 || submitting} className="text-dark-secondary border border-border">
                       <ChevronLeft className="mr-2 h-4 w-4" /> Sebelumnya
                     </Button>
                     {step < STEPS.length - 1 ? (

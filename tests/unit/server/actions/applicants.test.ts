@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { RegistrationInput } from '@/lib/validations/registration'
+import { revalidatePath } from 'next/cache'
 
-const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data, id: 'mock-id' })) as any
+const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data })) as any
 const mockLocalQuery = vi.fn(() => []) as any
 const mockLocalDelete = vi.fn(() => true) as any
 const mockIsRegistrationOpen = vi.fn(() => true) as any
@@ -56,19 +57,30 @@ const VALID_APPLICANT: RegistrationInput = {
   consent: true,
 }
 
+function registrationForm() {
+  const form = new FormData()
+  for (const [key, value] of Object.entries(VALID_APPLICANT)) form.set(key, String(value))
+  return form
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(revalidatePath).mockReset()
+  mockLocalInsert.mockImplementation((_table: string, data: unknown) => ({ ...data as object }))
   mockLocalQuery.mockReset().mockReturnValue([])
   mockRequireAdmin.mockResolvedValue({ user: { id: 'admin-1' }, supabase: null })
   mockIsRegistrationOpen.mockReturnValue(true)
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 describe('createApplicant', () => {
   it('validates correct data successfully', async () => {
     const { createApplicant } = await import('@/server/actions/applicants')
     const result = await createApplicant(VALID_APPLICANT)
     expect(result.error).toBeUndefined()
-    expect(result.data).toBeDefined()
+    expect(result.data).toMatchObject({ full_name: VALID_APPLICANT.full_name, email: VALID_APPLICANT.email, selection_year: 2026 })
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/applicants')
   })
 
   it('returns error for missing required fields', async () => {
@@ -107,11 +119,20 @@ describe('createApplicant', () => {
     expect(result.error).toContain('email')
   })
 
-  it('returns error for height below minimum', async () => {
-    const { createApplicant } = await import('@/server/actions/applicants')
-    const result = await createApplicant({ ...VALID_APPLICANT, height_cm: 100 })
-    expect(result.error).toBeDefined()
-    expect(result.error).toContain('Tinggi')
+  describe.each(['Laki-laki', 'Perempuan'] as const)('%s height', (gender) => {
+    it.each([0.5, 100, 155, 165, 250])('accepts positive height %s without former limits', async (height_cm) => {
+      const { createApplicant } = await import('@/server/actions/applicants')
+      const result = await createApplicant({ ...VALID_APPLICANT, gender, height_cm })
+      expect(result.error).toBeUndefined()
+      expect(mockLocalInsert).toHaveBeenCalledWith('applicants', expect.objectContaining({ gender, height_cm }))
+    })
+
+    it.each(['', 0, -1, NaN, Infinity, -Infinity, undefined])('rejects invalid height %s without writing', async (height_cm) => {
+      const { createApplicant } = await import('@/server/actions/applicants')
+      const result = await createApplicant({ ...VALID_APPLICANT, gender, height_cm: height_cm as number })
+      expect(result.error).toBeDefined()
+      expect(mockLocalInsert).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects direct finalist creation without writing', async () => {
@@ -155,8 +176,64 @@ describe('submitRegistration', () => {
     fd.append('essay', 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.')
     fd.append('consent', 'true')
     const result = await submitRegistration(fd)
-    expect(result.error).toBeUndefined()
-    expect(result.data).toBeDefined()
+    expect(result).toEqual({ data: { id: expect.any(String) } })
+    expect(mockLocalInsert).toHaveBeenCalledWith('applicants', expect.objectContaining({ id: result.data!.id }))
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('does not run cache invalidation after a successful public insert', async () => {
+    vi.mocked(revalidatePath).mockImplementation(() => { throw new Error('cache unavailable') })
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    expect(await submitRegistration(registrationForm())).toEqual({ data: { id: expect.any(String) } })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('uses the supplied UUID without persisting the submission field', async () => {
+    const id = crypto.randomUUID()
+    const form = registrationForm()
+    form.set('submission_id', id.toUpperCase())
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    expect(await submitRegistration(form)).toEqual({ data: { id } })
+    const payload = mockLocalInsert.mock.calls[0][1]
+    expect(payload.id).toBe(id)
+    expect(payload).not.toHaveProperty('submission_id')
+  })
+
+  it.each(['', 'not-a-uuid', '123', '00000000-0000-0000-0000-00000000000Z'])('rejects invalid submission ID %j without writing', async token => {
+    const form = registrationForm()
+    form.set('submission_id', token)
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    expect((await submitRegistration(form)).error).toMatch(/ID pengiriman tidak valid/)
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
+  it.each(['open', 'rules', 'insert'])('controls unexpected %s errors and logs only safe metadata', async stage => {
+    const failure = Object.assign(new Error('private john@example.com 20123456 body'), { code: 'XX000', digest: 'safe-digest' })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    if (stage === 'open') mockIsRegistrationOpen.mockRejectedValueOnce(failure)
+    if (stage === 'rules') mockLocalQuery.mockImplementationOnce(() => { throw failure })
+    if (stage === 'insert') mockLocalInsert.mockImplementationOnce(() => { throw failure })
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    const result = await submitRegistration(registrationForm())
+    expect(result.data).toBeUndefined()
+    expect(result.error).toMatch(/belum dapat dikonfirmasi/)
+    expect(result.error).not.toMatch(/private|john@example.com|20123456|body|Gagal menyimpan/)
+    expect(log).toHaveBeenCalledExactlyOnceWith('Registration error', {
+      reference: expect.any(String), name: 'Error', code: 'XX000', digest: 'safe-digest',
+    })
+    const reference = log.mock.calls[0][1].reference
+    expect(reference).toMatch(/^[0-9a-f-]{36}$/)
+    expect(result.error).toContain(reference)
+    if (stage !== 'insert') expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
+  it('controls unexpected FormData parsing failures', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const form = registrationForm()
+    vi.spyOn(form, 'entries').mockImplementation(() => { throw new Error('private body') })
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    expect((await submitRegistration(form)).error).toMatch(/belum dapat dikonfirmasi/)
+    expect(mockLocalInsert).not.toHaveBeenCalled()
   })
 
   it('returns error for invalid FormData', async () => {

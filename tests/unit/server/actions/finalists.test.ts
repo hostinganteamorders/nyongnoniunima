@@ -228,6 +228,34 @@ describe('updateFinalistData', () => {
     expect(result.error).toBeDefined()
   })
 
+  it('allows omitted measurements without overwriting them', async () => {
+    const { updateFinalistData } = await import('@/server/actions/finalists')
+    const result = await updateFinalistData({ applicant_id: '2', tahun: '2026' })
+    expect(result.error).toBeUndefined()
+    expect(mockLocalUpdate).not.toHaveBeenCalledWith('applicants', expect.anything(), expect.anything())
+  })
+
+  it.each([
+    { height_cm: 100, weight_kg: 20 },
+    { height_cm: 250, weight_kg: 200 },
+    { height_cm: 0.5, weight_kg: 0.5 },
+  ])('saves positive measurements outside former bounds: %j', async (measurements) => {
+    const { updateFinalistData } = await import('@/server/actions/finalists')
+    const result = await updateFinalistData({ applicant_id: '2', tahun: '2026', ...measurements })
+    expect(result.error).toBeUndefined()
+    expect(mockLocalUpdate).toHaveBeenCalledWith('applicants', '2', expect.objectContaining(measurements))
+  })
+
+  describe.each(['height_cm', 'weight_kg'])('%s', (field) => {
+    it.each(['', 0, -1, NaN, Infinity, -Infinity, null])('rejects invalid supplied measurement %s without writing', async (value) => {
+      const { updateFinalistData } = await import('@/server/actions/finalists')
+      const result = await updateFinalistData({ applicant_id: '2', tahun: '2026', [field]: value })
+      expect(result.error).toBeDefined()
+      expect(mockLocalUpdate).not.toHaveBeenCalled()
+      expect(mockLocalInsert).not.toHaveBeenCalled()
+    })
+  })
+
   it('does not report success or save a profile when the applicant update failed', async () => {
     mockLocalUpdate.mockReturnValueOnce(null)
     const { updateFinalistData } = await import('@/server/actions/finalists')

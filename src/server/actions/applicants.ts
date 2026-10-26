@@ -37,50 +37,95 @@ interface FinalistProfile {
   tahun: string
 }
 
-async function insertApplicant(data: RegistrationInput, status: string, selection_year: number): Promise<{ data?: ApplicantRecord; error?: string }> {
+function insertApplicant(data: RegistrationInput, status: string, selection_year: number, requestId: string): Promise<{ data?: { id: string }; error?: string }>
+function insertApplicant(data: RegistrationInput, status: string, selection_year: number): Promise<{ data?: ApplicantRecord; error?: string }>
+async function insertApplicant(data: RegistrationInput, status: string, selection_year: number, requestId?: string): Promise<{ data?: ApplicantRecord | { id: string }; error?: string }> {
   try {
+    const id = requestId ?? crypto.randomUUID()
+    // Include omitted optional fields so an ID cannot be reused with a partial match.
+    const payload = { ...data, ipk: data.ipk ?? null, instagram: data.instagram || null, tiktok: data.tiktok || null, facebook: data.facebook || null, selection_year }
+    const matches = (record: Record<string, unknown>) => Object.entries(payload).every(([key, value]) => {
+      const stored = record[key]
+      if (key === 'consent') return stored === true || stored === 1
+      if (value == null || value === '') return stored == null || stored === ''
+      if (typeof value === 'number') return stored != null && stored !== '' && Number(stored) === value
+      return stored === value
+    })
+    const reuseError = 'ID pengiriman sudah digunakan untuk data pendaftaran yang berbeda.'
     if (isUsingLocalDb()) {
       const db = getLocalDb()
-      const record = db.transaction(() => {
+      return db.transaction(() => {
+        if (requestId) {
+          const existing = db.prepare('SELECT * FROM applicants WHERE id = ?').get(id) as (ApplicantRecord & Record<string, unknown>) | undefined
+          if (existing) return matches(existing) ? { data: existing } : { error: reuseError }
+        }
         const announcement = db.prepare('SELECT published_at FROM selection_announcements WHERE year = ?').get(selection_year) as { published_at: string | null } | undefined
-        if (announcement?.published_at) throw new Error('Seleksi tahun ini sudah dipublikasikan; pendaftaran ditutup')
-        return localInsert<ApplicantRecord>('applicants', { ...data, consent: Number(data.consent), user_id: null, status, selection_year, id: crypto.randomUUID() })
+        if (announcement?.published_at) return { error: 'Seleksi tahun ini sudah dipublikasikan; pendaftaran ditutup' }
+        return { data: localInsert<ApplicantRecord>('applicants', { ...payload, consent: Number(data.consent), user_id: null, status, id }) }
       }).immediate()
-      return { data: record }
     }
     // The insert trigger checks publication under the same year lock as publish.
-    const { data: record, error } = await getAdminClient().from('applicants')
-      .insert({ ...data, user_id: null, status, selection_year }).select().single()
-    if (error) return { error: error.message }
+    const client = getAdminClient()
+    const { data: record, error } = await client.from('applicants')
+      .insert({ ...payload, user_id: null, status, id }).select(requestId ? 'id' : '*').single()
+    if (error) {
+      if (!requestId) return { error: error.message }
+      // Other unique constraints (such as email/NIM) are not idempotent success.
+      if (requestId && error.code === '23505' && /unique constraint "applicants_pkey"/.test(error.message)) {
+        const { data: existing, error: lookupError } = await client.from('applicants')
+          .select(['id', ...Object.keys(payload)].join(',')).eq('id', id).maybeSingle<Record<string, unknown> & { id: string }>()
+        if (lookupError) throw lookupError
+        if (existing && existing.id === id && matches(existing)) return { data: { id } }
+        return { error: reuseError }
+      }
+      throw error
+    }
+    if (!record) throw new Error('Missing insert response')
     return { data: record }
   } catch (error) {
+    if (requestId) throw error
     return { error: error instanceof Error ? error.message : 'Gagal menyimpan pendaftaran' }
   }
 }
 
-export async function submitRegistration(formData: FormData) {
-  if (!(await isRegistrationOpen())) {
-    return { error: 'Pendaftaran sedang ditutup. Silakan tunggu pengumuman pembukaan pendaftaran resmi berikutnya.' }
-  }
+export async function submitRegistration(formData: FormData): Promise<{ data?: { id: string }; error?: string }> {
+  try {
+    const token = formData.get('submission_id')
+    if (token !== null && (typeof token !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token))) {
+      return { error: 'ID pengiriman tidak valid. Muat ulang formulir pendaftaran.' }
+    }
+    const requestId = typeof token === 'string' ? token.toLowerCase() : crypto.randomUUID()
+    if (!(await isRegistrationOpen())) {
+      return { error: 'Pendaftaran sedang ditutup. Silakan tunggu pengumuman pembukaan pendaftaran resmi berikutnya.' }
+    }
 
-  const rawData = Object.fromEntries(formData.entries())
-  const normalized = { ...rawData, consent: rawData.consent === 'true' }
-  let rules: Awaited<ReturnType<typeof getRegistrationRules>>
-  try { rules = await getRegistrationRules() } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Pengaturan pendaftaran belum tersedia' }
-  }
-  const parsed = createRegistrationSchema(rules.auditionStart).safeParse(normalized)
+    const rawData = Object.fromEntries(formData.entries())
+    const normalized = { ...rawData, consent: rawData.consent === 'true' }
+    const rules = await getRegistrationRules()
+    const parsed = createRegistrationSchema(rules.auditionStart).safeParse(normalized)
 
-  if (!parsed.success) {
-    const fieldErrors = parsed.error.flatten().fieldErrors
-    const messages = Object.entries(fieldErrors).map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
-    return { error: messages.join('; ') }
-  }
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors
+      const messages = Object.entries(fieldErrors).map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+      return { error: messages.join('; ') }
+    }
 
-  const result = await insertApplicant(parsed.data, 'pending', rules.year)
-  if (result.error) return result
-  revalidatePath('/register')
-  return result
+    const result = await insertApplicant(parsed.data, 'pending', rules.year, requestId)
+    if (result.error) return { error: result.error }
+    if (!result.data) throw new Error('Missing insert response')
+    return { data: { id: result.data.id } }
+  } catch (error) {
+    const reference = crypto.randomUUID()
+    const metadata: Record<string, string> = { reference }
+    if (error && typeof error === 'object') {
+      for (const key of ['name', 'code', 'digest'] as const) {
+        const value = (error as Record<string, unknown>)[key]
+        if (typeof value === 'string' && /^[\w.-]{1,80}$/.test(value)) metadata[key] = value
+      }
+    }
+    console.error('Registration error', metadata)
+    return { error: `Pendaftaran belum dapat dikonfirmasi. Coba kirim ulang dengan ID pengiriman yang sama. Referensi: ${reference}` }
+  }
 }
 
 export async function getApplicants() {

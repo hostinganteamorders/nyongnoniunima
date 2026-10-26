@@ -16,6 +16,21 @@ let selection: typeof import('@/server/actions/selection')
 let applicants: typeof import('@/server/actions/applicants')
 let finalists: typeof import('@/server/actions/finalists')
 
+const VALID_REGISTRATION = {
+  full_name: 'John Doe', email: 'john@example.com', phone: '081234567890', date_of_birth: '2004-05-15',
+  place_of_birth: 'Manado', gender: 'Laki-laki', nim: '20123456', faculty: 'ft', study_program: 'ft_ti',
+  semester: '4', ipk: '3.5', address: 'Jl. Contoh No. 123, Kelurahan, Kecamatan', city: 'Manado', province: 'Sulawesi Utara',
+  height_cm: '175', weight_kg: '60', occupation: 'Mahasiswa', education: 'Sarjana S1', foreign_language: 'English',
+  essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.', consent: 'true',
+}
+
+function registrationForm() {
+  const form = new FormData()
+  for (const [key, value] of Object.entries(VALID_REGISTRATION)) form.set(key, value)
+  form.set('submission_id', crypto.randomUUID())
+  return form
+}
+
 function seed(id: string, status = 'pending', year = 2026) {
   db.prepare(`INSERT INTO applicants (id, full_name, email, phone, date_of_birth, address, city, province, faculty, study_program, status, selection_year, ktp_url)
     VALUES (?, ?, 'private@example.com', '081234567890', '2004-05-15', 'Private address', 'Manado', 'Sulut', 'ft', 'ft_ti', ?, ?, '/private/ktp.pdf')`).run(id, `Name ${id}`, status, year)
@@ -260,26 +275,25 @@ describe('staged selection workflow', () => {
   })
 
   it('uses configured registration year or audition fallback and keeps registration gated', async () => {
-    const valid = {
-      full_name: 'John Doe', email: 'john@example.com', phone: '081234567890', date_of_birth: '2004-05-15',
-      place_of_birth: 'Manado', gender: 'Laki-laki', nim: '20123456', faculty: 'ft', study_program: 'ft_ti',
-      semester: '4', ipk: '3.5', address: 'Jl. Contoh No. 123, Kelurahan, Kecamatan', city: 'Manado', province: 'Sulawesi Utara',
-      height_cm: '175', weight_kg: '60', occupation: 'Mahasiswa', education: 'Sarjana S1', foreign_language: 'English',
-      essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.', consent: 'true',
-    }
+    const valid = { ...VALID_REGISTRATION }
     const form = new FormData()
     for (const [key, value] of Object.entries(valid)) form.set(key, value)
     expect((await applicants.submitRegistration(form)).error).toMatch(/ditutup/)
     db.prepare("UPDATE settings SET value = 'true' WHERE key = 'registration_open'").run()
-    expect((await applicants.submitRegistration(form)).data?.selection_year).toBe(Number(AUDITION_START.slice(0, 4)))
+    const initial = await applicants.submitRegistration(form)
+    expect(initial).toEqual({ data: { id: expect.any(String) } })
+    expect(db.prepare('SELECT selection_year FROM applicants WHERE id = ?').get(initial.data!.id)).toEqual({ selection_year: Number(AUDITION_START.slice(0, 4)) })
     await selection.setRegistrationYear(2027)
-    expect((await applicants.submitRegistration(form)).error).toMatch(/tanggal audisi/)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect((await applicants.submitRegistration(form)).error).toMatch(/belum dapat dikonfirmasi/)
+    expect(log).toHaveBeenCalledOnce()
     const { saveAuditionDate } = await import('@/server/actions/registration-rules')
     await saveAuditionDate(2027, '2027-10-26')
     expect((await applicants.submitRegistration(form)).error).toMatch(/Usia maksimal/)
     valid.date_of_birth = '2005-05-15'
     form.set('date_of_birth', valid.date_of_birth)
-    expect((await applicants.submitRegistration(form)).data?.selection_year).toBe(2027)
+    const next = await applicants.submitRegistration(form)
+    expect(db.prepare('SELECT selection_year FROM applicants WHERE id = ?').get(next.data!.id)).toEqual({ selection_year: 2027 })
     expect((await selection.getSelectionAdminData()).activeYear).toBe(2027)
     expect((await applicants.createApplicant({ ...valid, consent: true, status: 'finalist' } as never)).error).toMatch(/Status/)
     await expect(selection.setRegistrationYear(2026.5)).rejects.toThrow()
@@ -289,6 +303,82 @@ describe('staged selection workflow', () => {
     expect((await applicants.submitRegistration(form)).error).toMatch(/dipublikasikan/)
     expect((await applicants.createApplicant({ ...valid, consent: true } as never)).error).toMatch(/dipublikasikan/)
     expect((await applicants.getApplicantStats()).total).toBe(2)
+  })
+})
+
+describe('idempotent local public registration', () => {
+  beforeEach(() => {
+    db.prepare("UPDATE settings SET value = 'true' WHERE key = 'registration_open'").run()
+  })
+
+  it('returns only the same ID for sequential and concurrent retries and stores one row', async () => {
+    const form = registrationForm()
+    const expected = { data: { id: form.get('submission_id') } }
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    expect(await Promise.all(Array.from({ length: 8 }, () => applicants.submitRegistration(form)))).toEqual(Array(8).fill(expected))
+    expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 1 })
+    expect(db.prepare('SELECT consent, selection_year FROM applicants').get()).toEqual({ consent: 1, selection_year: 2026 })
+  })
+
+  it('serializes concurrent first submissions under the same ID', async () => {
+    const form = registrationForm()
+    const results = await Promise.all(Array.from({ length: 8 }, () => applicants.submitRegistration(form)))
+    expect(results).toEqual(Array(8).fill({ data: { id: form.get('submission_id') } }))
+    expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 1 })
+  })
+
+  it('rejects changed data under an existing ID without overwriting or inserting', async () => {
+    const form = registrationForm()
+    await applicants.submitRegistration(form)
+    const original = db.prepare('SELECT * FROM applicants').get()
+    form.set('essay', `${VALID_REGISTRATION.essay} Changed content.`)
+    expect((await applicants.submitRegistration(form)).error).toMatch(/ID pengiriman sudah digunakan/)
+    expect(db.prepare('SELECT * FROM applicants').all()).toEqual([original])
+  })
+
+  it.each(['ipk', 'instagram', 'tiktok', 'facebook'])('rejects omitted optional %s when the stored value is populated', async field => {
+    const form = registrationForm()
+    form.set('semester', '2')
+    if (field !== 'ipk') form.set(field, '@original')
+    await applicants.submitRegistration(form)
+    form.delete(field)
+    expect((await applicants.submitRegistration(form)).error).toMatch(/ID pengiriman sudah digunakan/)
+    expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 1 })
+  })
+
+  it('accepts omitted and blank optional fields roundtrip for semester two', async () => {
+    const form = registrationForm()
+    form.set('semester', '2')
+    form.set('ipk', '')
+    form.set('instagram', '')
+    const expected = { data: { id: form.get('submission_id') } }
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    expect(db.prepare('SELECT ipk, instagram, tiktok, facebook FROM applicants').get()).toEqual({ ipk: null, instagram: null, tiktok: null, facebook: null })
+    form.delete('ipk')
+    form.delete('instagram')
+    form.set('tiktok', '')
+    form.set('height_cm', '175.00')
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 1 })
+  })
+
+  it('checks replay before publication but still blocks fresh IDs after publication', async () => {
+    const form = registrationForm()
+    const expected = await applicants.submitRegistration(form)
+    db.prepare("INSERT INTO selection_announcements (year, published_at) VALUES (2026, datetime('now'))").run()
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    form.set('submission_id', crypto.randomUUID())
+    expect((await applicants.submitRegistration(form)).error).toMatch(/dipublikasikan/)
+    expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 1 })
+  })
+
+  it('rejects reuse across registration years', async () => {
+    const form = registrationForm()
+    await applicants.submitRegistration(form)
+    db.prepare('UPDATE applicants SET selection_year = 2025').run()
+    expect((await applicants.submitRegistration(form)).error).toMatch(/ID pengiriman sudah digunakan/)
+    expect(db.prepare('SELECT selection_year FROM applicants').all()).toEqual([{ selection_year: 2025 }])
   })
 })
 
