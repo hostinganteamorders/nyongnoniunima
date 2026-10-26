@@ -52,6 +52,7 @@ export function Footer() {
                 { label: 'Tentang', href: '/about' },
                 { label: 'Titleholders', href: '/titleholders' },
                 { label: 'Finalis', href: '/finalists' },
+                { label: 'Pengumuman', href: '/announcements' },
                 { label: 'Hall of Fame', href: '/hall-of-fame' },
                 { label: 'Prestasi Alumni', href: '/alumni-achievements' },
               ].map((link) => (

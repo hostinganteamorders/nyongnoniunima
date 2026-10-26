@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
+  AUDITION_START,
+  createRegistrationSchema,
+  createRegistrationStepSchema,
   registrationSchema,
   registrationStepSchema,
   newsSchema,
@@ -189,6 +192,70 @@ describe('registrationStepSchema', () => {
 
   it('rejects step 3 without consent', () => {
     expect(registrationStepSchema[2].safeParse({ ...validStep3, consent: false }).success).toBe(false)
+  })
+})
+
+describe('date-aware registration rules', () => {
+  it('preserves the default full schema behavior', () => {
+    const schema = createRegistrationSchema(AUDITION_START)
+    for (const data of [
+      BASE_REGISTRATION,
+      { ...BASE_REGISTRATION, date_of_birth: '2000-01-01' },
+      { ...BASE_REGISTRATION, semester: 8 },
+      { ...BASE_REGISTRATION, semester: 3, ipk: undefined },
+      { ...BASE_REGISTRATION, height_cm: 165 },
+    ]) {
+      const actual = schema.safeParse(data)
+      const expected = registrationSchema.safeParse(data)
+      expect(actual.success).toBe(expected.success)
+      if (actual.success && expected.success) expect(actual.data).toEqual(expected.data)
+      if (!actual.success && !expected.success) expect(actual.error.issues).toEqual(expected.error.issues)
+    }
+  })
+
+  it('shifts the exact inclusive age boundary with the audition year', () => {
+    const schema = createRegistrationSchema('2027-10-26')
+    const steps = createRegistrationStepSchema('2027-10-26')
+    const boundary = { ...BASE_REGISTRATION, date_of_birth: '2004-10-27' }
+    const tooOld = { ...BASE_REGISTRATION, date_of_birth: '2004-10-26' }
+    expect(registrationSchema.safeParse(tooOld).success).toBe(true)
+    expect(schema.safeParse(boundary).success).toBe(true)
+    expect(steps[0].safeParse(boundary).success).toBe(true)
+    for (const candidate of [schema, steps[0]]) {
+      const result = candidate.safeParse(tooOld)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.flatten().fieldErrors.date_of_birth).toEqual(['Usia maksimal 22 tahun (364 hari) saat audisi'])
+    }
+  })
+
+  it('uses the configured day, not just its year', () => {
+    const data = { ...BASE_REGISTRATION, date_of_birth: '2004-05-15' }
+    expect(createRegistrationSchema('2027-01-01').safeParse(data).success).toBe(true)
+    expect(createRegistrationSchema('2027-10-26').safeParse(data).success).toBe(false)
+  })
+
+  it('keeps semester, IPK and role-specific height requirements in dynamic steps', () => {
+    const steps = createRegistrationStepSchema('2027-10-26')
+    const data = { ...BASE_REGISTRATION, date_of_birth: '2005-05-15' }
+    expect(steps[0].safeParse({ ...data, semester: 7 }).success).toBe(true)
+    expect(steps[0].safeParse({ ...data, semester: 8 }).success).toBe(false)
+    expect(steps[0].safeParse({ ...data, semester: 2, ipk: undefined }).success).toBe(true)
+    expect(steps[0].safeParse({ ...data, semester: 3, ipk: undefined }).success).toBe(false)
+    expect(steps[0].safeParse({ ...data, semester: 3, ipk: 2.99 }).success).toBe(false)
+    expect(steps[1].safeParse({ ...data, height_cm: 169 }).success).toBe(false)
+    expect(steps[1].safeParse({ ...data, gender: 'Perempuan', height_cm: 160 }).success).toBe(true)
+    expect(steps[1].safeParse({ ...data, gender: 'Perempuan', height_cm: 159 }).success).toBe(false)
+    expect(steps[2].safeParse({ ...data, consent: false }).success).toBe(false)
+  })
+
+  it.each(['', '2027-2-01', '2027-02-29', '2028-02-30', '2027-04-31', '2027-13-01', '2027-00-01', '2027-10-26T00:00:00Z'])('rejects invalid audition date %s in both factories', (date) => {
+    expect(() => createRegistrationSchema(date)).toThrow()
+    expect(() => createRegistrationStepSchema(date)).toThrow()
+  })
+
+  it('accepts a real leap day in both factories', () => {
+    expect(() => createRegistrationSchema('2028-02-29')).not.toThrow()
+    expect(() => createRegistrationStepSchema('2028-02-29')).not.toThrow()
   })
 })
 

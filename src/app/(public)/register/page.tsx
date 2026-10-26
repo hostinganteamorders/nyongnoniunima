@@ -3,10 +3,16 @@ import { Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SyaratKetentuan } from '@/components/syarat-ketentuan'
 import { isRegistrationOpen } from '@/server/actions/unima'
+import { getRegistrationRules } from '@/server/actions/registration-rules'
 import { RegisterForm } from './register-form'
 
 export default async function RegisterPage() {
   const open = await isRegistrationOpen()
+  let rules: Awaited<ReturnType<typeof getRegistrationRules>> | null = null
+  if (open) {
+    try { rules = await getRegistrationRules() } catch { /* Fail closed until audition rules are available. */ }
+  }
+  const unavailable = open && !rules
 
   return (
     <div className="min-h-screen bg-light-gray pb-section">
@@ -16,15 +22,17 @@ export default async function RegisterPage() {
         <div className="relative z-10 max-w-4xl mx-auto">
           <h1 className="text-display-xl text-white font-bold mb-4">Pendaftaran</h1>
           <p className="text-body-lg text-white/80 max-w-2xl mx-auto">
-            {open
+            {unavailable
+              ? 'Pendaftaran sementara belum tersedia. Nantikan informasi jadwal audisi resmi.'
+              : open
               ? 'Daftarkan dirimu untuk menjadi duta mahasiswa Nyong Noni UNIMA berikutnya.'
               : 'Pendaftaran belum dibuka. Nantikan pengumuman resmi segera.'}
           </p>
         </div>
       </section>
 
-      {open ? (
-        <RegisterForm />
+      {open && rules ? (
+        <RegisterForm auditionStart={rules.auditionStart} />
       ) : (
         <section className="py-12">
           <div className="mx-auto max-w-3xl px-4">
@@ -32,11 +40,11 @@ export default async function RegisterPage() {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-blue/10 border border-primary-blue/20">
                 <Clock className="h-8 w-8 text-primary-blue" />
               </div>
-              <h2 className="text-display-md text-dark-text">Coming Soon</h2>
+              <h2 className="text-display-md text-dark-text">{unavailable ? 'Pendaftaran Belum Tersedia' : 'Coming Soon'}</h2>
               <p className="text-body text-dark-secondary max-w-lg mx-auto">
-                Pendaftaran Nyong Noni UNIMA saat ini sedang ditutup. Pantau terus website
-                resmi dan media sosial kami untuk informasi jadwal pembukaan pendaftaran
-                berikutnya.
+                {unavailable
+                  ? 'Jadwal audisi dan ketentuan pendaftaran sedang disiapkan. Silakan coba lagi nanti atau hubungi panitia untuk informasi lebih lanjut.'
+                  : 'Pendaftaran Nyong Noni UNIMA saat ini sedang ditutup. Pantau terus website resmi dan media sosial kami untuk informasi jadwal pembukaan pendaftaran berikutnya.'}
               </p>
               <div className="pt-2">
                 <Link href="/">

@@ -9,6 +9,7 @@ import { Plus, Search, Trash2, X, Eye } from 'lucide-react'
 import { updateApplicantStatus, deleteApplicant, createApplicant } from '@/server/actions/applicants'
 import { getFaculties, getStudyPrograms } from '@/server/actions/unima'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface Applicant {
   id: string
@@ -18,6 +19,9 @@ interface Applicant {
   city: string
   province: string
   status: string
+  selection_stage?: string | null
+  selection_year?: number
+  selection_published?: boolean
   created_at: string
   height_cm?: number
   weight_kg?: number
@@ -54,6 +58,10 @@ const STATUS_LABELS: Record<string, string> = {
   verified: 'Terverifikasi',
   rejected: 'Ditolak',
   finalist: 'Finalis',
+  semifinalist: 'Semifinalis',
+  finalist_draft: 'Draf finalis',
+  not_selected_faculty: 'Tidak lolos fakultas',
+  not_selected_university: 'Tidak lolos ke final',
 }
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
@@ -137,8 +145,8 @@ export function ApplicantsClient({
       await updateApplicantStatus(id, status as any)
       setNotification({ type: 'success', message: 'Status berhasil diubah' })
       router.refresh()
-    } catch {
-      setNotification({ type: 'error', message: 'Gagal mengubah status' })
+    } catch (error) {
+      setNotification({ type: 'error', message: error instanceof Error ? error.message : 'Gagal mengubah status' })
     } finally {
       setLoading(null)
     }
@@ -189,8 +197,9 @@ export function ApplicantsClient({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-dark-text">Pendaftar</h1>
+        <Button asChild variant="outline"><Link href="/admin/selection">Seleksi & Pengumuman</Link></Button>
         <Button onClick={() => setShowAdd(true)}>
           <Plus className="mr-2 h-4 w-4" /> Tambah Pendaftar
         </Button>
@@ -240,7 +249,7 @@ export function ApplicantsClient({
                   <tr className="border-b border-border text-left text-muted">
                     <th className="pb-3 font-medium">Nama</th>
                     <th className="pb-3 font-medium hidden md:table-cell">Email</th>
-                    <th className="pb-3 font-medium hidden lg:table-cell">Kabupaten/Kota</th>
+                    <th className="pb-3 font-medium hidden lg:table-cell">Fakultas / Tahun</th>
                     <th className="pb-3 font-medium">Status</th>
                     <th className="pb-3 font-medium hidden sm:table-cell">Tanggal</th>
                     <th className="pb-3 font-medium text-right">Aksi</th>
@@ -251,10 +260,14 @@ export function ApplicantsClient({
                     <tr key={a.id} className="border-b border-border/50 hover:bg-gray-50/50">
                       <td className="py-3 font-medium">{a.full_name}</td>
                       <td className="py-3 text-muted hidden md:table-cell">{a.email}</td>
-                      <td className="py-3 text-muted hidden lg:table-cell">{a.city}</td>
+                      <td className="py-3 text-muted hidden lg:table-cell">{facultyName(a.faculty)}{a.selection_year && <span className="block text-xs">{a.selection_year}</span>}</td>
                       <td className="py-3">
                         <div className="relative inline-block">
-                          <select
+                          {a.selection_stage || a.status === 'finalist' || a.selection_published ? (
+                            <Link href="/admin/selection" className="text-xs font-semibold text-primary-blue underline">
+                              {STATUS_LABELS[a.selection_stage || a.status] || a.selection_stage}
+                            </Link>
+                          ) : <select
                             value={a.status}
                             onChange={(e) => handleStatusChange(a.id, e.target.value)}
                             disabled={loading === a.id}
@@ -275,8 +288,7 @@ export function ApplicantsClient({
                             <option value="pending">Pending</option>
                             <option value="verified">Terverifikasi</option>
                             <option value="rejected">Ditolak</option>
-                            <option value="finalist">Finalis</option>
-                          </select>
+                          </select>}
                         </div>
                       </td>
                       <td className="py-3 text-muted hidden sm:table-cell text-xs">

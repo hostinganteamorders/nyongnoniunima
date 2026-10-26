@@ -11,8 +11,6 @@ interface FinalistItem {
   study_program: string | null
   gender: string | null
   photo_url: string | null
-  city: string
-  province: string
   profile?: { tahun?: string | number } | null
   created_at?: string
 }

@@ -3,11 +3,11 @@ import { z } from 'zod'
 // Tanggal awal audisi — dipakai validasi usia maksimal 22 tahun (364 hari) saat audisi.
 export const AUDITION_START = '2026-10-26'
 
-// Usia maksimal 22 tahun + 364 hari dihitung dari tanggal audisi.
-const _audition = new Date(`${AUDITION_START}T00:00:00Z`)
-const MIN_BIRTH_DATE = new Date(_audition.getTime())
-MIN_BIRTH_DATE.setUTCFullYear(MIN_BIRTH_DATE.getUTCFullYear() - 22)
-MIN_BIRTH_DATE.setTime(MIN_BIRTH_DATE.getTime() - 364 * 24 * 60 * 60 * 1000)
+export const auditionDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal audisi harus berformat YYYY-MM-DD')
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00Z`)
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  }, 'Tanggal audisi tidak valid')
 
 // Tinggi badan minimal per peran (dari Syarat & Ketentuan).
 const MIN_HEIGHT: Record<string, number> = { 'Laki-laki': 170, Perempuan: 160 }
@@ -16,7 +16,7 @@ const MIN_HEIGHT: Record<string, number> = { 'Laki-laki': 170, Perempuan: 160 }
 const _ipkPreprocess = (v: unknown) =>
   v === '' || v === null || v === undefined ? undefined : Number(v)
 
-export const registrationSchema = z
+const registrationFields = z
   .object({
     full_name: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
     email: z.string().email('Email tidak valid'),
@@ -46,11 +46,17 @@ export const registrationSchema = z
     essay: z.string().min(50, 'Esai minimal 50 karakter').max(2000, 'Esai maksimal 2000 karakter'),
     consent: z.literal(true, { errorMap: () => ({ message: 'Anda harus menyetujui syarat dan ketentuan' }) }),
   })
-  .superRefine((data, ctx) => {
+
+function createRegistrationRefinement(auditionStart: string) {
+  const minBirthDate = new Date(`${auditionDateSchema.parse(auditionStart)}T00:00:00Z`)
+  minBirthDate.setUTCFullYear(minBirthDate.getUTCFullYear() - 22)
+  minBirthDate.setTime(minBirthDate.getTime() - 364 * 24 * 60 * 60 * 1000)
+
+  return (data: Partial<z.infer<typeof registrationFields>>, ctx: z.RefinementCtx) => {
     // Usia maksimal 22 tahun (364 hari) saat audisi.
     if (data.date_of_birth) {
       const dob = new Date(`${data.date_of_birth}T00:00:00Z`)
-      if (!Number.isNaN(dob.getTime()) && dob < MIN_BIRTH_DATE) {
+      if (!Number.isNaN(dob.getTime()) && dob < minBirthDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['date_of_birth'],
@@ -87,7 +93,14 @@ export const registrationSchema = z
         })
       }
     }
-  })
+  }
+}
+
+export function createRegistrationSchema(auditionStart: string) {
+  return registrationFields.superRefine(createRegistrationRefinement(auditionStart))
+}
+
+export const registrationSchema = createRegistrationSchema(AUDITION_START)
 
 export const registrationStepSchema = [
   z.object({
@@ -123,7 +136,17 @@ export const registrationStepSchema = [
     essay: z.string().min(50, 'Esai minimal 50 karakter').max(2000, 'Esai maksimal 2000 karakter'),
     consent: z.literal(true, { errorMap: () => ({ message: 'Anda harus menyetujui syarat dan ketentuan' }) }),
   }),
-]
+] as const
+
+export function createRegistrationStepSchema(auditionStart: string) {
+  const refine = createRegistrationRefinement(auditionStart)
+  return [
+    registrationStepSchema[0].superRefine(refine),
+    // Gender is supplied from biodata to retain the role-specific height rule.
+    registrationStepSchema[1].extend({ gender: registrationFields.shape.gender.optional() }).superRefine(refine),
+    registrationStepSchema[2],
+  ] as const
+}
 
 export const newsSchema = z.object({
   title: z.string().min(5, 'Judul minimal 5 karakter'),

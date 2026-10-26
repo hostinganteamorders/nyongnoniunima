@@ -9,7 +9,8 @@ import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { submitRegistration } from '@/server/actions/applicants'
 import { getFaculties, getStudyPrograms } from '@/server/actions/unima'
 import {
-  registrationSchema,
+  createRegistrationSchema,
+  createRegistrationStepSchema,
   type RegistrationInput,
 } from '@/lib/validations/registration'
 
@@ -67,7 +68,7 @@ const Input = ({ id, label, type = "text", placeholder, error, options, hint, ..
   </div>
 )
 
-export function RegisterForm() {
+export function RegisterForm({ auditionStart }: { auditionStart: string }) {
   const [step, setStep] = useState(0)
   const [faculties, setFaculties] = useState<Faculty[]>([])
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([])
@@ -80,8 +81,9 @@ export function RegisterForm() {
     getStudyPrograms().then(setStudyPrograms).catch(() => {})
   }, [])
 
+  const stepSchemas = createRegistrationStepSchema(auditionStart)
   const form = useForm<RegistrationInput>({
-    resolver: zodResolver(registrationSchema),
+    resolver: zodResolver(createRegistrationSchema(auditionStart)),
     defaultValues: {
       full_name: '', email: '', phone: '', date_of_birth: '', place_of_birth: '',
       gender: undefined, nim: '', faculty: '', study_program: '', semester: undefined,
@@ -93,7 +95,7 @@ export function RegisterForm() {
     mode: 'onChange',
   })
 
-  const { register, handleSubmit, formState: { errors }, trigger, getValues, watch, setValue } = form
+  const { register, handleSubmit, formState: { errors }, clearErrors, setError, getValues, watch, setValue } = form
   const selectedFaculty = watch('faculty')
   const stepRef = useRef(0)
   stepRef.current = step
@@ -115,7 +117,13 @@ export function RegisterForm() {
   const validateStep = async (targetStep: number): Promise<boolean> => {
     const fields = fieldsByStep[targetStep] || []
     if (fields.length === 0) return true
-    return trigger(fields)
+    clearErrors(fields)
+    const result = stepSchemas[targetStep].safeParse(getValues())
+    if (result.success) return true
+    for (const issue of result.error.issues) {
+      setError(issue.path[0] as keyof RegistrationInput, { type: 'validation', message: issue.message })
+    }
+    return false
   }
 
   const nextStep = async () => {
@@ -307,8 +315,9 @@ export function RegisterForm() {
                   </div>
                   <h3 className="text-display-md text-dark-text">Pendaftaran Berhasil</h3>
                   <p className="text-body text-dark-secondary max-w-lg mx-auto">
-                    Terima kasih telah mendaftar! Data kamu telah diterima dan akan diproses. Kami akan menghubungi melalui email untuk informasi lebih lanjut.
+                    Terima kasih telah mendaftar! Data kamu akan diverifikasi untuk seleksi tingkat fakultas. Peserta yang ditetapkan sebagai semifinalis akan dihubungi panitia melalui WhatsApp untuk mengikuti seleksi tingkat universitas. Hasil seleksi finalis diumumkan melalui website.
                   </p>
+                  <Link href="/announcements" className="inline-block text-sm font-semibold text-primary-blue underline">Lihat Pengumuman Seleksi</Link>
                 </div>
               )}
 

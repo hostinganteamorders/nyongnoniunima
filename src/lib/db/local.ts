@@ -305,6 +305,45 @@ function initSchema(database: Database.Database) {
   `)
 
   migrateStaleCategoryChecks(database)
+  migrateSelection(database)
+}
+
+function migrateSelection(database: Database.Database): void {
+  database.transaction(() => {
+    const columns = database.prepare('PRAGMA table_info(applicants)').all() as { name: string }[]
+    if (!columns.some(c => c.name === 'selection_year')) {
+      database.exec('ALTER TABLE applicants ADD COLUMN selection_year INTEGER')
+    }
+    database.exec(`
+      UPDATE applicants SET selection_year = COALESCE(
+        (SELECT CAST(tahun AS INTEGER) FROM finalist_profiles WHERE applicant_id = applicants.id
+         AND length(tahun) = 4 AND tahun NOT GLOB '*[^0-9]*'
+         AND CAST(tahun AS INTEGER) BETWEEN 2000 AND 2100 ORDER BY created_at DESC LIMIT 1),
+        CAST(strftime('%Y', created_at) AS INTEGER)
+      ) WHERE selection_year IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_applicants_selection_year ON applicants(selection_year);
+      CREATE TABLE IF NOT EXISTS selection_entries (
+        applicant_id TEXT PRIMARY KEY REFERENCES applicants(id) ON DELETE CASCADE,
+        year INTEGER NOT NULL CHECK (year BETWEEN 2000 AND 2100),
+        stage TEXT NOT NULL CHECK (stage IN ('semifinalist', 'finalist_draft', 'finalist', 'not_selected_faculty', 'not_selected_university')),
+        semifinalist_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_selection_entries_year ON selection_entries(year);
+      CREATE TABLE IF NOT EXISTS faculty_whatsapp_groups (
+        year INTEGER NOT NULL CHECK (year BETWEEN 2000 AND 2100),
+        faculty_id TEXT NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
+        invite_url TEXT NOT NULL,
+        PRIMARY KEY (year, faculty_id)
+      );
+      CREATE TABLE IF NOT EXISTS selection_announcements (
+        year INTEGER PRIMARY KEY CHECK (year BETWEEN 2000 AND 2100),
+        title TEXT NOT NULL DEFAULT '',
+        body TEXT NOT NULL DEFAULT '',
+        published_at TEXT,
+        snapshot_json TEXT NOT NULL DEFAULT '[]'
+      );
+    `)
+  })()
 }
 
 function getTableSql(database: Database.Database, table: string): string {

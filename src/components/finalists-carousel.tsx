@@ -8,8 +8,9 @@ interface FinalistCardData {
   id: string
   full_name: string
   city?: string
-  faculty?: string
-  study_program?: string
+  faculty?: string | null
+  study_program?: string | null
+  profile?: { tahun: string }
   photo_url: string | null
   umur: number | null
 }
@@ -132,7 +133,7 @@ export function FinalistsCarousel({ items, speed = 0.4 }: Props) {
 
             <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-accent mb-1.5">
-                Finalist 2026
+                Finalis {item.profile?.tahun || ''}
               </p>
               <h3 className="text-headline text-white font-bold leading-tight">
                 {item.full_name}

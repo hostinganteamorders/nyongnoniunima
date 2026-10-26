@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: 'Tentang', href: '/about' },
   { label: 'Titleholders', href: '/titleholders' },
   { label: 'Finalis', href: '/finalists' },
+  { label: 'Pengumuman', href: '/announcements' },
   { label: 'Hall of Fame', href: '/hall-of-fame' },
   { label: 'Prestasi Alumni', href: '/alumni-achievements' },
   { label: 'Galeri', href: '/gallery' },
@@ -54,7 +55,7 @@ export function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Navigasi utama">
+          <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Navigasi utama">
             {NAV_ITEMS.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -81,7 +82,7 @@ export function Header() {
           </nav>
 
           <button
-            className="lg:hidden relative z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-border text-dark-text hover:bg-light-gray transition-colors"
+            className="xl:hidden relative z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-border text-dark-text hover:bg-light-gray transition-colors"
             onClick={() => setIsOpen(!isOpen)}
             aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
             aria-expanded={isOpen}
@@ -92,7 +93,7 @@ export function Header() {
 
         <div
           className={cn(
-            'fixed inset-0 z-40 bg-white lg:hidden transition-transform duration-300 pt-[72px]',
+            'fixed inset-0 z-40 overflow-y-auto bg-white xl:hidden transition-transform duration-300 pt-[72px]',
             isOpen ? 'translate-x-0' : 'translate-x-full',
           )}
           aria-hidden={!isOpen}

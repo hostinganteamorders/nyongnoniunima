@@ -1,3 +1,5 @@
+import type { SelectionStage } from '@/lib/selection'
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export interface Database {
@@ -65,6 +67,7 @@ export interface Database {
           essay: string | null
           consent: boolean
           status: 'pending' | 'verified' | 'rejected' | 'finalist'
+          selection_year: number
           created_at: string
           updated_at: string
         }
@@ -101,6 +104,7 @@ export interface Database {
           essay?: string | null
           consent?: boolean
           status?: 'pending' | 'verified' | 'rejected' | 'finalist'
+          selection_year: number
           created_at?: string
           updated_at?: string
         }
@@ -137,8 +141,24 @@ export interface Database {
           essay?: string | null
           consent?: boolean
           status?: 'pending' | 'verified' | 'rejected' | 'finalist'
+          selection_year?: number
           updated_at?: string
         }
+      }
+      selection_entries: {
+        Row: { applicant_id: string; year: number; stage: SelectionStage; semifinalist_at: string | null }
+        Insert: { applicant_id: string; year: number; stage: SelectionStage; semifinalist_at?: string | null }
+        Update: { stage?: SelectionStage; semifinalist_at?: string | null }
+      }
+      faculty_whatsapp_groups: {
+        Row: { year: number; faculty_id: string; invite_url: string }
+        Insert: { year: number; faculty_id: string; invite_url: string }
+        Update: { invite_url?: string }
+      }
+      selection_announcements: {
+        Row: { year: number; title: string; body: string; published_at: string | null; snapshot_json: string }
+        Insert: { year: number; title?: string; body?: string; published_at?: string | null; snapshot_json?: string }
+        Update: { title?: string; body?: string; published_at?: string | null; snapshot_json?: string }
       }
       news: {
         Row: {
@@ -516,8 +536,13 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
+    Functions: {
+      mutate_selection: {
+        Args: { p_operation: string; p_year?: number; p_applicant_id?: string; p_stage?: string; p_faculty_id?: string; p_url?: string; p_title?: string; p_body?: string; p_expected_ids?: string[]; p_expected_title?: string; p_expected_body?: string; p_data?: Json }
+        Returns: undefined
+      }
+    }
+    Enums: { selection_stage: SelectionStage }
   }
 }
 

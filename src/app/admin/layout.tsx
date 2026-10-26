@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
+  ListChecks,
   Newspaper,
   Image,
   Calendar,
@@ -27,6 +28,7 @@ import { createClient } from '@/lib/supabase/client'
 const SIDEBAR_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Applicants', href: '/admin/applicants', icon: Users },
+  { label: 'Seleksi & Pengumuman', href: '/admin/selection', icon: ListChecks },
   { label: 'Finalists', href: '/admin/finalists', icon: UserCheck },
   { label: 'Titleholders', href: '/admin/titleholders', icon: Crown },
   { label: 'Hall of Fame', href: '/admin/hall-of-fame', icon: Trophy },

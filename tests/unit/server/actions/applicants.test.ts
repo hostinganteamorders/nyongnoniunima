@@ -3,15 +3,21 @@ import type { RegistrationInput } from '@/lib/validations/registration'
 
 const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data, id: 'mock-id' })) as any
 const mockLocalQuery = vi.fn(() => []) as any
-const mockLocalUpdate = vi.fn() as any
 const mockLocalDelete = vi.fn(() => true) as any
 const mockIsRegistrationOpen = vi.fn(() => true) as any
+const mockRequireAdmin = vi.fn(async () => ({ user: { id: 'admin-1' }, supabase: null }))
+const mockRun = vi.fn(() => ({ changes: 1 }))
+const mockPrepare = vi.fn((sql: string) => ({
+  get: vi.fn(() => sql.startsWith('SELECT status') ? { status: 'pending', selection_year: 2026 } : undefined),
+  run: mockRun,
+}))
+const mockDb = { prepare: mockPrepare, transaction: vi.fn((fn: () => void) => ({ immediate: fn })) }
 
 vi.mock('@/lib/db/local', () => ({
   isUsingLocalDb: () => true,
   localInsert: mockLocalInsert,
   localQuery: mockLocalQuery,
-  localUpdate: mockLocalUpdate,
+  getLocalDb: () => mockDb,
   localDelete: mockLocalDelete,
 }))
 
@@ -20,7 +26,7 @@ vi.mock('@/server/actions/unima', () => ({
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
-  requireAdmin: vi.fn(() => Promise.resolve({ user: { id: 'admin-1' }, supabase: null })),
+  requireAdmin: mockRequireAdmin,
   getAdminClient: vi.fn(() => ({})),
 }))
 
@@ -52,6 +58,8 @@ const VALID_APPLICANT: RegistrationInput = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockLocalQuery.mockReset().mockReturnValue([])
+  mockRequireAdmin.mockResolvedValue({ user: { id: 'admin-1' }, supabase: null })
   mockIsRegistrationOpen.mockReturnValue(true)
 })
 
@@ -106,11 +114,18 @@ describe('createApplicant', () => {
     expect(result.error).toContain('Tinggi')
   })
 
-  it('accepts custom status override', async () => {
+  it('rejects direct finalist creation without writing', async () => {
     const { createApplicant } = await import('@/server/actions/applicants')
     const result = await createApplicant({ ...VALID_APPLICANT, status: 'finalist' })
+    expect(result.error).toMatch(/finalis.*publikasi/)
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
+  it('accepts a verified status without promoting to finalist', async () => {
+    const { createApplicant } = await import('@/server/actions/applicants')
+    const result = await createApplicant({ ...VALID_APPLICANT, status: 'verified' })
     expect(result.error).toBeUndefined()
-    expect(result.data).toBeDefined()
+    expect(result.data?.status).toBe('verified')
   })
 })
 
@@ -188,19 +203,62 @@ describe('getApplicants', () => {
     const result = await getApplicants()
     expect(result).toHaveLength(0)
   })
+
+  it('merges profile data and only projects published stages as finalist in the admin DTO', async () => {
+    const records = [
+      { id: 'published', full_name: 'Published', status: 'verified', selection_year: 2026, photo_url: '/registration.png' },
+      { id: 'draft', full_name: 'Draft', status: 'verified', selection_year: 2026 },
+      { id: 'unannounced', full_name: 'Unannounced', status: 'verified', selection_year: 2025 },
+      { id: 'legacy', full_name: 'Legacy', status: 'finalist', selection_year: 2024 },
+    ]
+    mockLocalQuery.mockImplementation((table: string) => {
+      if (table === 'applicants') return records
+      if (table === 'selection_entries') return [
+        { applicant_id: 'published', year: 2026, stage: 'finalist', semifinalist_at: '2026-10-01' },
+        { applicant_id: 'draft', year: 2026, stage: 'finalist_draft', semifinalist_at: '2026-10-02' },
+        { applicant_id: 'unannounced', year: 2025, stage: 'finalist', semifinalist_at: '2025-10-01' },
+      ]
+      if (table === 'selection_announcements') return [{ year: 2026, published_at: '2026-10-03' }, { year: 2025, published_at: null }]
+      if (table === 'finalist_profiles') return [{ applicant_id: 'published', bio: 'Biography', instagram: '@published', photo_url: '/profile.png', tahun: '2026' }]
+      return []
+    })
+    const { getApplicants, getApplicantStats } = await import('@/server/actions/applicants')
+    const result = await getApplicants()
+    expect(result[0]).toMatchObject({ status: 'finalist', stage: 'finalist', selection_stage: 'finalist', semifinalist_at: '2026-10-01', bio: 'Biography', instagram: '@published', photo_url: '/profile.png', tahun: '2026' })
+    expect(result[0].profile).toMatchObject({ bio: 'Biography' })
+    expect(result[1]).toMatchObject({ status: 'verified', selection_stage: 'finalist_draft' })
+    expect(result[2].status).toBe('verified')
+    expect(result[3].status).toBe('finalist')
+    expect(records[0].status).toBe('verified')
+    expect(await getApplicantStats()).toEqual({ total: 4, pending: 0, verified: 2, rejected: 0, finalist: 2 })
+  })
 })
 
 describe('updateApplicantStatus', () => {
-  it('updates status successfully', async () => {
+  it('rejects direct finalist promotion', async () => {
     const { updateApplicantStatus } = await import('@/server/actions/applicants')
-    await expect(updateApplicantStatus('test-id', 'finalist')).resolves.not.toThrow()
-    expect(mockLocalUpdate).toHaveBeenCalledWith('applicants', 'test-id', expect.objectContaining({ status: 'finalist' }))
+    await expect(updateApplicantStatus('test-id', 'finalist')).rejects.toThrow(/finalis.*publikasi/)
+    expect(mockPrepare).not.toHaveBeenCalled()
   })
 
   it('updates to verified status', async () => {
     const { updateApplicantStatus } = await import('@/server/actions/applicants')
     await expect(updateApplicantStatus('test-id', 'verified')).resolves.not.toThrow()
-    expect(mockLocalUpdate).toHaveBeenCalledWith('applicants', 'test-id', expect.objectContaining({ status: 'verified' }))
+    expect(mockPrepare).toHaveBeenCalledWith('UPDATE applicants SET status = ?, updated_at = ? WHERE id = ?')
+    expect(mockRun).toHaveBeenCalledWith('verified', expect.any(String), 'test-id')
+  })
+
+  it('rejects invalid runtime status values before reading the DB', async () => {
+    const { updateApplicantStatus } = await import('@/server/actions/applicants')
+    await expect(updateApplicantStatus('test-id', 'admin' as never)).rejects.toThrow(/Status tidak valid/)
+    expect(mockPrepare).not.toHaveBeenCalled()
+  })
+
+  it('keeps legacy finalists immutable through this action', async () => {
+    mockPrepare.mockReturnValueOnce({ get: vi.fn(() => ({ status: 'finalist', selection_year: 2026 })), run: mockRun })
+    const { updateApplicantStatus } = await import('@/server/actions/applicants')
+    await expect(updateApplicantStatus('test-id', 'pending')).rejects.toThrow(/tidak dapat diubah/)
+    expect(mockRun).not.toHaveBeenCalled()
   })
 })
 
@@ -214,13 +272,13 @@ describe('deleteApplicant', () => {
 
 describe('getApplicantStats', () => {
   beforeEach(() => {
-    mockLocalQuery.mockReturnValue([
+    mockLocalQuery.mockImplementation((table: string) => table === 'applicants' ? [
       { status: 'pending' },
       { status: 'pending' },
       { status: 'verified' },
       { status: 'finalist' },
       { status: 'rejected' },
-    ])
+    ] : [])
   })
 
   it('returns correct stats breakdown', async () => {
@@ -242,5 +300,19 @@ describe('getApplicantStats', () => {
     expect(stats.verified).toBe(0)
     expect(stats.finalist).toBe(0)
     expect(stats.rejected).toBe(0)
+  })
+})
+
+describe('admin authorization', () => {
+  it('guards every admin applicant entry point before reads or writes', async () => {
+    mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
+    const { getApplicants, getApplicantStats, updateApplicantStatus, createApplicant, deleteApplicant } = await import('@/server/actions/applicants')
+    for (const call of [() => getApplicants(), () => getApplicantStats(), () => updateApplicantStatus('id', 'verified'), () => createApplicant(VALID_APPLICANT), () => deleteApplicant('id')]) {
+      await expect(call()).rejects.toThrow('Unauthorized')
+    }
+    expect(mockLocalQuery).not.toHaveBeenCalled()
+    expect(mockPrepare).not.toHaveBeenCalled()
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+    expect(mockLocalDelete).not.toHaveBeenCalled()
   })
 })

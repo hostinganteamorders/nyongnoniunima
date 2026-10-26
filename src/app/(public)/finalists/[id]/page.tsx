@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getPublicFinalist } from '@/server/actions/finalists'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Cake, GraduationCap, Instagram, Facebook, Music2, Ruler, Weight, Briefcase, Mail, Phone, ArrowLeft, Heart } from 'lucide-react'
+import { Cake, GraduationCap, Instagram, ArrowLeft, Heart } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function FinalistDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -51,26 +51,6 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                     <Instagram className="h-4 w-4" />
                   </a>
                 )}
-                {finalist.facebook && (
-                  <a
-                    href={`https://facebook.com/${finalist.facebook}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-primary-blue hover:text-white transition-colors"
-                  >
-                    <Facebook className="h-4 w-4" />
-                  </a>
-                )}
-                {finalist.tiktok && (
-                  <a
-                    href={`https://tiktok.com/@${finalist.tiktok.replace('@', '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-light-gray flex items-center justify-center text-dark-secondary hover:bg-primary-blue hover:text-white transition-colors"
-                  >
-                    <Music2 className="h-4 w-4" />
-                  </a>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -79,17 +59,16 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
           <div className="space-y-8">
             <div>
               <h1 className="text-display-xl text-dark-text tracking-tight mb-2">{finalist.full_name}</h1>
-              <p className="text-subhead text-dark-secondary">{finalist.occupation}</p>
             </div>
 
             {/* Bio */}
-            {finalist.profile?.bio && (
+            {finalist.bio && (
               <div className="bg-light-gray rounded-xl p-6 border border-border">
                 <div className="flex items-center gap-2 mb-3">
                   <Heart className="h-4 w-4 text-primary-blue" />
                   <h2 className="text-headline text-dark-text">Tentang</h2>
                 </div>
-                <p className="text-body text-dark-secondary leading-relaxed">{finalist.profile.bio}</p>
+                <p className="text-body text-dark-secondary leading-relaxed">{finalist.bio}</p>
               </div>
             )}
 
@@ -111,49 +90,11 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
                 <Cake className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
                 <div>
                   <p className="text-caption text-dark-secondary uppercase mb-1">Umur</p>
-                  <p className="text-body-sm font-semibold text-dark-text">{finalist.umur} tahun</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Briefcase className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-caption text-dark-secondary uppercase mb-1">Pekerjaan</p>
-                  <p className="text-body-sm font-semibold text-dark-text">{finalist.occupation}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Ruler className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-caption text-dark-secondary uppercase mb-1">Tinggi</p>
-                  <p className="text-body-sm font-semibold text-dark-text">{finalist.height_cm} cm</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 bg-white rounded-xl border border-border">
-                <Weight className="h-5 w-5 text-primary-blue mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-caption text-dark-secondary uppercase mb-1">Berat</p>
-                  <p className="text-body-sm font-semibold text-dark-text">{finalist.weight_kg} kg</p>
+                  <p className="text-body-sm font-semibold text-dark-text">{finalist.umur != null ? `${finalist.umur} tahun` : '-'}</p>
                 </div>
               </div>
             </div>
 
-            {/* Contact */}
-            <div className="bg-light-gray rounded-xl p-6 border border-border">
-              <h2 className="text-headline text-dark-text mb-4">Kontak</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                  <Mail className="h-4 w-4 text-primary-blue" /> {finalist.email}
-                </div>
-                <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                  <Phone className="h-4 w-4 text-primary-blue" /> {finalist.phone}
-                </div>
-                {finalist.instagram && (
-                  <div className="flex items-center gap-3 text-body-sm text-dark-secondary">
-                    <Instagram className="h-4 w-4 text-primary-blue" /> {finalist.instagram}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </section>

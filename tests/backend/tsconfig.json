@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "../../next-env.d.ts",
+    "../../src/server/actions/selection.ts",
+    "../../src/server/actions/applicants.ts",
+    "../../src/server/actions/finalists.ts",
+    "../../src/types/database.ts",
+    "./**/*.ts"
+  ]
+}

@@ -4,7 +4,7 @@ import { requireAdmin, getAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { hallOfFameSchema, alumniAchievementSchema, finalistUpdateSchema, titleholderSchema } from '@/lib/validations/registration'
 import { revalidatePath } from 'next/cache'
-import { isUsingLocalDb, localQuery, localInsert, localUpdate, localDelete } from '@/lib/db/local'
+import { getLocalDb, isUsingLocalDb, localQuery, localInsert, localUpdate, localDelete } from '@/lib/db/local'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
@@ -55,7 +55,7 @@ async function resolveFacultyNames<T extends { faculty?: string | null; study_pr
       faculties = localQuery<{ id: string; name: string }>('faculties', {}) || []
       programs = localQuery<{ id: string; name: string }>('study_programs', {}) || []
     } else {
-      const supabase = await createServerSupabaseClient()
+      const supabase = getAdminClient()
       const [f, p] = await Promise.all([
         supabase.from('faculties').select('id, name'),
         supabase.from('study_programs').select('id, name'),
@@ -75,68 +75,76 @@ async function resolveFacultyNames<T extends { faculty?: string | null; study_pr
   }
 }
 
-// Public: get all finalists with profile info
-export async function getPublicFinalists() {
-  if (isUsingLocalDb()) {
-    const applicants = localQuery<any>('applicants', {
-      where: { status: 'finalist' },
-      orderBy: { column: 'created_at', direction: 'DESC' },
-    }) || []
-    const profiles: any[] = localQuery<any>('finalist_profiles', {}) || []
-
-    const rows = applicants.map((a: any) => {
-      const profile = profiles.find((p: any) => p.applicant_id === a.id)
-      return {
-        ...a,
-        instagram: profile?.instagram || null,
-        photo_url: profile?.photo_url || a.photo_url || null,
-        bio: profile?.bio || null,
-        umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null,
-      }
-    })
-    return resolveFacultyNames(rows)
-  }
-
-  const supabase = await createServerSupabaseClient()
-  const { data: applicants } = await supabase
-    .from('applicants')
-    .select('*')
-    .eq('status', 'finalist')
-    .order('created_at', { ascending: false }) as any
-
-  const ids = (applicants || []).map((a: any) => a.id)
-  const { data: profiles } = ids.length > 0
-    ? await supabase.from('finalist_profiles').select('*').in('applicant_id', ids) as any
-    : { data: [] }
-
-  return resolveFacultyNames(
-    (applicants || []).map((a: any) => ({
-      ...a,
-      profile: (profiles || []).find((p: any) => p.applicant_id === a.id) || null,
-      umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null,
-    })),
-  )
+export interface PublicFinalist {
+  id: string
+  full_name: string
+  faculty: string | null
+  study_program: string | null
+  gender: string | null
+  photo_url: string | null
+  instagram: string | null
+  bio: string | null
+  umur: number | null
+  profile: { tahun: string }
 }
 
-// Public: get single finalist
-export async function getPublicFinalist(id: string) {
+async function publicFinalists(id?: string): Promise<PublicFinalist[]> {
+  type Applicant = Omit<PublicFinalist, 'umur' | 'profile' | 'bio'> & { status: string; date_of_birth: string | null; selection_year: number }
+  type Profile = { applicant_id: string; tahun: string; instagram: string | null; photo_url: string | null; bio: string | null }
+  type Entry = { applicant_id: string; year: number; stage: string }
+  let applicants: Applicant[]
+  let profiles: Profile[]
+  let entries: Entry[]
+  let announcements: { year: number; published_at: string | null }[]
   if (isUsingLocalDb()) {
-    const applicants = localQuery<any>('applicants', { where: { id } }) || []
-    if (!applicants.length) return null
-    const a = applicants[0]
-    const profiles = localQuery<any>('finalist_profiles', { where: { applicant_id: id } }) || []
-    const profile = profiles[0] || null
-    const [row] = await resolveFacultyNames([{ ...a, umur: a.date_of_birth ? calculateAge(a.date_of_birth) : null, photo_url: profile?.photo_url || a.photo_url || null, profile }])
-    return row || null
+    applicants = localQuery<Applicant>('applicants', { where: id ? { id } : undefined, orderBy: { column: 'created_at', direction: 'DESC' } })
+    entries = localQuery<Entry>('selection_entries', { where: { stage: 'finalist' } })
+    announcements = localQuery('selection_announcements')
+    profiles = id ? localQuery<Profile>('finalist_profiles', { where: { applicant_id: id } }) : localQuery<Profile>('finalist_profiles')
+  } else {
+    const client = getAdminClient()
+    const [e, n] = await Promise.all([
+      client.from('selection_entries').select('applicant_id, year, stage').eq('stage', 'finalist'),
+      client.from('selection_announcements').select('year, published_at').not('published_at', 'is', null),
+    ])
+    if (e.error || n.error) throw new Error(e.error?.message || n.error?.message)
+    entries = e.data || []
+    announcements = n.data || []
+    const years = new Set(announcements.filter(a => a.published_at).map(a => a.year))
+    const ids = entries.filter(e => years.has(e.year)).map(e => e.applicant_id)
+    let query = client.from('applicants').select('id, full_name, faculty, study_program, gender, photo_url, instagram, status, date_of_birth, selection_year')
+    query = ids.length ? query.or(`status.eq.finalist,id.in.(${ids.join(',')})`) : query.eq('status', 'finalist')
+    if (id) query = query.eq('id', id)
+    const result = await query.order('created_at', { ascending: false })
+    if (result.error) throw new Error(result.error.message)
+    applicants = result.data || []
+    const p = applicants.length ? await client.from('finalist_profiles').select('applicant_id, tahun, instagram, photo_url, bio').in('applicant_id', applicants.map(a => a.id)) : { data: [], error: null }
+    if (p.error) throw new Error(p.error.message)
+    profiles = p.data || []
   }
+  const years = new Set(announcements.filter(a => a.published_at).map(a => a.year))
+  const published = new Map(entries.filter(e => e.stage === 'finalist' && years.has(e.year)).map(e => [e.applicant_id, e.year]))
+  const rows = applicants.filter(a => (!id || a.id === id) && (a.status === 'finalist' || published.get(a.id) === a.selection_year)).map(a => {
+    const profile = profiles.find(p => p.applicant_id === a.id)
+    const age = a.date_of_birth ? calculateAge(a.date_of_birth) : null
+    return {
+      id: a.id, full_name: a.full_name, faculty: a.faculty ?? null, study_program: a.study_program ?? null,
+      gender: a.gender ?? null, photo_url: profile?.photo_url || a.photo_url || null,
+      instagram: profile?.instagram || a.instagram || null, bio: profile?.bio || null,
+      umur: age !== null && Number.isFinite(age) ? age : null,
+      profile: { tahun: published.has(a.id) ? String(published.get(a.id)) : profile?.tahun || String(a.selection_year) },
+    }
+  })
+  return resolveFacultyNames(rows)
+}
 
-  const supabase = await createServerSupabaseClient()
-  const { data: applicant } = await supabase.from('applicants').select('*').eq('id', id).single() as any
-  if (!applicant) return null
+export async function getPublicFinalists(): Promise<PublicFinalist[]> {
+  return publicFinalists()
+}
 
-  const { data: profile } = await supabase.from('finalist_profiles').select('*').eq('applicant_id', id).single() as any
-  const [row] = await resolveFacultyNames([{ ...applicant, umur: calculateAge(applicant.date_of_birth), photo_url: profile?.photo_url || applicant.photo_url || null, profile: profile || null }])
-  return row || null
+export async function getPublicFinalist(id: string): Promise<PublicFinalist | null> {
+  if (typeof id !== 'string' || !id) return null
+  return (await publicFinalists(id))[0] ?? null
 }
 
 // Public: hall of fame
@@ -213,30 +221,29 @@ export async function updateFinalistData(data: {
   const { applicant_id, instagram, photo_url, bio, tahun, ...applicantData } = parsed.data
 
   if (isUsingLocalDb()) {
-    if (Object.keys(applicantData).length > 0) {
-      localUpdate('applicants', applicant_id, { ...applicantData, updated_at: new Date().toISOString() })
+    try {
+      getLocalDb().transaction(() => {
+        if (!localQuery('applicants', { where: { id: applicant_id } }).length) throw new Error('Peserta tidak ditemukan')
+        if (Object.keys(applicantData).length > 0) {
+          const updated = localUpdate('applicants', applicant_id, { ...applicantData, updated_at: new Date().toISOString() })
+          if (!updated) throw new Error('Gagal memperbarui peserta')
+        }
+        const profileData = Object.fromEntries(Object.entries({ instagram, photo_url, bio, tahun }).filter(([, value]) => value !== undefined))
+        const existing = localQuery<{ id: string }>('finalist_profiles', { where: { applicant_id }, orderBy: { column: 'created_at', direction: 'DESC' } })
+        if (existing.length > 0) {
+          const updated = localUpdate('finalist_profiles', existing[0].id, { ...profileData, updated_at: new Date().toISOString() })
+          if (!updated) throw new Error('Gagal memperbarui profil')
+        } else {
+          localInsert('finalist_profiles', { applicant_id, ...profileData, id: crypto.randomUUID() })
+        }
+      }).immediate()
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Gagal menyimpan finalis' }
     }
-    const existing = localQuery<any>('finalist_profiles', { where: { applicant_id } })
-    if (existing.length > 0) {
-      localUpdate('finalist_profiles', existing[0].id, { instagram, photo_url, bio, tahun, updated_at: new Date().toISOString() })
-    } else {
-      localInsert('finalist_profiles', { applicant_id, instagram, photo_url, bio, tahun, id: crypto.randomUUID() })
-    }
-    revalidatePath('/admin/finalists')
-    revalidatePath('/finalists')
-    revalidatePath('/admin/applicants')
-    return { data: parsed.data }
-  }
-
-  const adminClient = getAdminClient()
-  if (Object.keys(applicantData).length > 0) {
-    await adminClient.from('applicants').update({ ...applicantData, updated_at: new Date().toISOString() }).eq('id', applicant_id)
-  }
-  const existing = await adminClient.from('finalist_profiles').select('id').eq('applicant_id', applicant_id).single()
-  if (existing.data) {
-    await adminClient.from('finalist_profiles').update({ instagram, photo_url, bio, tahun, updated_at: new Date().toISOString() }).eq('applicant_id', applicant_id)
   } else {
-    await adminClient.from('finalist_profiles').insert({ applicant_id, instagram, photo_url, bio, tahun })
+    const { applicant_id: id, ...writeData } = parsed.data
+    const { error } = await getAdminClient().rpc('mutate_selection', { p_operation: 'finalist_data', p_applicant_id: id, p_data: writeData })
+    if (error) return { error: error.message }
   }
   revalidatePath('/admin/finalists')
   revalidatePath('/finalists')

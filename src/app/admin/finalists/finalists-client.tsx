@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Search, Crown, X, FileText, Instagram, Upload, Trash2 } from 'lucide-react'
-import { updateApplicantStatus } from '@/server/actions/applicants'
 import { updateFinalistData } from '@/server/actions/finalists'
 import { uploadToStorage, ensureAdminSession, cleanupUnusedUploads } from '@/lib/uploads'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 
 interface Applicant {
   id: string
@@ -29,6 +29,8 @@ interface Applicant {
   status: string
   instagram?: string
   bio?: string
+  tahun?: string
+  selection_stage?: string | null
 }
 
 interface EditData {
@@ -86,7 +88,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
   }, [notification])
 
   const finalists = applicants.filter((a) => a.status === 'finalist')
-  const candidates = applicants.filter((a) => a.status !== 'finalist' && a.status !== 'rejected')
+  const candidates = applicants.filter((a) => a.selection_stage === 'semifinalist' || a.selection_stage === 'finalist_draft')
 
   const filteredFinalists = finalists.filter((a) =>
     a.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -94,16 +96,6 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
   const filteredCandidates = candidates.filter((a) =>
     a.full_name.toLowerCase().includes(search.toLowerCase()) ||
     a.city.toLowerCase().includes(search.toLowerCase()))
-
-  const handlePromote = async (id: string) => {
-    setLoading(id)
-    try { await updateApplicantStatus(id, 'finalist'); setNotification({ type: 'success', message: 'Finalis berhasil ditambahkan' }); router.refresh() } catch { setNotification({ type: 'error', message: 'Gagal menambahkan finalis' }) } finally { setLoading(null) }
-  }
-
-  const handleDemote = async (id: string) => {
-    setLoading(id)
-    try { await updateApplicantStatus(id, 'verified'); setNotification({ type: 'success', message: 'Status finalis dihapus' }); router.refresh() } catch { setNotification({ type: 'error', message: 'Gagal mengubah status' }) } finally { setLoading(null) }
-  }
 
   const openEdit = (a: Applicant) => {
     sessionUploads.current.clear()
@@ -123,7 +115,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
       education: a.education || '',
       instagram: a.instagram || '',
       bio: a.bio || '',
-      tahun: String(new Date().getFullYear()),
+      tahun: a.tahun || String(new Date().getFullYear()),
       photo_url: a.photo_url || '',
     })
     setError('')
@@ -178,8 +170,9 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-dark-text">Finalis</h1>
+        <Button asChild variant="outline"><Link href="/admin/selection">Seleksi & Pengumuman</Link></Button>
       </div>
 
       {notification && (
@@ -219,9 +212,6 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                       <Button variant="outline" size="sm" onClick={() => openEdit(f)}>
                         <FileText className="h-3 w-3 mr-1" /> Edit
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDemote(f.id)} disabled={loading === f.id}>
-                        <X className="h-3 w-3 mr-1" /> Hapus
-                      </Button>
                     </div>
                   </div>
                 ))}
@@ -233,7 +223,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Calon Finalis ({candidates.length})</CardTitle>
+              <CardTitle className="text-lg">Profil Semifinalis ({candidates.length})</CardTitle>
               <div className="relative w-48">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <Input placeholder="Cari..." className="pl-9 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -251,8 +241,8 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                       <p className="font-medium text-sm">{c.full_name}</p>
                       <p className="text-xs text-muted">{c.city} &middot; {c.height_cm} cm &middot; {c.occupation}</p>
                     </div>
-                    <Button variant="accent" size="sm" onClick={() => handlePromote(c.id)} disabled={loading === c.id}>
-                      <Crown className="h-3 w-3 mr-1" /> Jadikan Finalis
+                    <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
+                      <FileText className="h-3 w-3 mr-1" /> Edit Profil
                     </Button>
                   </div>
                 ))}
@@ -266,7 +256,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-8">
           <Card className="w-full max-w-2xl my-8">
             <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10 border-b">
-              <CardTitle className="text-lg">Edit Finalis: {editData.full_name}</CardTitle>
+              <CardTitle className="text-lg">Edit Profil: {editData.full_name}</CardTitle>
               <Button variant="ghost" size="icon" onClick={() => { void finishSession([]); setEditData(null) }}><X className="h-4 w-4" /></Button>
             </CardHeader>
             <CardContent className="pt-6">

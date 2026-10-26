@@ -6,3 +6,4 @@ export default async function FinalistsPage() {
 
   return <FinalistsClient finalists={finalists} />
 }
+export const dynamic = 'force-dynamic'

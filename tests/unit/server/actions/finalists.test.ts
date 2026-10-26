@@ -5,11 +5,19 @@ const mockLocalQuery = vi.fn((table: string, opts?: any) => {
     const all = [
       { id: '1', full_name: 'Alice', email: 'a@test.com', city: 'Manado', province: 'Sulut', height_cm: 165, occupation: 'Mahasiswa', education: 'S1', status: 'finalist', created_at: '2026-01-01', date_of_birth: '2000-05-10', photo_url: null },
       { id: '2', full_name: 'Bob', email: 'b@test.com', city: 'Tomohon', province: 'Sulut', height_cm: 170, occupation: 'Karyawan', education: 'SMA', status: 'finalist', created_at: '2026-01-02', date_of_birth: '1999-08-15', photo_url: null },
+      { id: '3', full_name: 'Pending', status: 'pending', selection_year: 2026 },
+      { id: '4', full_name: 'Draft', status: 'verified', selection_year: 2026 },
+      { id: '5', full_name: 'Published', status: 'verified', selection_year: 2026 },
     ]
     if (opts?.where?.id) return all.filter(a => a.id === opts.where.id)
     if (opts?.where?.status) return all.filter(a => a.status === opts.where.status)
     return all
   }
+  if (table === 'selection_entries') return [
+    { applicant_id: '4', year: 2026, stage: 'finalist_draft' },
+    { applicant_id: '5', year: 2026, stage: 'finalist' },
+  ]
+  if (table === 'selection_announcements') return [{ year: 2026, published_at: '2026-06-01' }]
   if (table === 'hall_of_fame') return [
     { id: 'h1', tahun: 2025, nyong_name: 'John', noni_name: 'Jane', kabupaten_kota: 'Manado' },
     { id: 'h2', tahun: 2024, nyong_name: 'Alex', noni_name: 'Sara', kabupaten_kota: 'Bitung' },
@@ -27,13 +35,14 @@ const mockLocalQuery = vi.fn((table: string, opts?: any) => {
       { id: 'fp1', applicant_id: '1', instagram: '@alice', photo_url: '/photos/alice.jpg', bio: 'Finalist bio', tahun: '2026' },
     ]
     if (opts?.where?.applicant_id) return []
-    return []
+    return [{ id: 'fp1', applicant_id: '1', instagram: '@alice', photo_url: '/photos/alice.jpg', bio: 'Finalist bio', tahun: '2026' }]
   }
   return []
 })
 const mockLocalInsert = vi.fn((table: string, data: any) => ({ ...data, id: 'mock-id' }))
-const mockLocalUpdate = vi.fn()
+const mockLocalUpdate = vi.fn((table: string, id: string, data: any) => ({ id, ...data }))
 const mockLocalDelete = vi.fn(() => true)
+const mockRequireAdmin = vi.fn(async () => ({ user: { id: 'admin-1' }, supabase: null }))
 
 vi.mock('@/lib/db/local', () => ({
   isUsingLocalDb: () => true,
@@ -41,10 +50,11 @@ vi.mock('@/lib/db/local', () => ({
   localQuery: mockLocalQuery,
   localUpdate: mockLocalUpdate,
   localDelete: mockLocalDelete,
+  getLocalDb: () => ({ transaction: (fn: () => unknown) => ({ immediate: fn }) }),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
-  requireAdmin: vi.fn(() => Promise.resolve({ user: { id: 'admin-1' }, supabase: null })),
+  requireAdmin: mockRequireAdmin,
   getAdminClient: vi.fn(() => ({})),
 }))
 
@@ -52,6 +62,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockRequireAdmin.mockResolvedValue({ user: { id: 'admin-1' }, supabase: null })
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-06-10T00:00:00Z'))
 })
@@ -61,18 +72,23 @@ afterEach(() => {
 })
 
 describe('getPublicFinalists', () => {
-  it('returns only finalists with profiles', async () => {
+  it('returns legacy and published finalists using only the safe public DTO', async () => {
     const { getPublicFinalists } = await import('@/server/actions/finalists')
     const result = await getPublicFinalists()
-    expect(result).toHaveLength(2)
+    expect(result.map(row => row.id)).toEqual(['1', '2', '5'])
     expect(result[0].full_name).toBe('Alice')
-    expect(result[0].status).toBe('finalist')
+    expect(Object.keys(result[0]).sort()).toEqual(['id', 'full_name', 'faculty', 'study_program', 'gender', 'photo_url', 'instagram', 'bio', 'umur', 'profile'].sort())
+    expect(result[0].profile).toEqual({ tahun: '2026' })
+    expect(result[0]).not.toHaveProperty('status')
+    expect(result[0]).not.toHaveProperty('email')
+    expect(result[0]).not.toHaveProperty('date_of_birth')
   })
 
   it('returns profile data when available', async () => {
     const { getPublicFinalists } = await import('@/server/actions/finalists')
     const result = await getPublicFinalists()
-    expect(result[0].instagram).toBeDefined()
+    expect(result[0].instagram).toBe('@alice')
+    expect(result[0].bio).toBe('Finalist bio')
   })
 
   it('calculates umur from date_of_birth', async () => {
@@ -103,6 +119,13 @@ describe('getPublicFinalist', () => {
     const result = await getPublicFinalist('2')
     expect(result).not.toBeNull()
     expect(result!.photo_url).toBeNull()
+  })
+
+  it('does not expose pending applicants or draft finalists by ID', async () => {
+    const { getPublicFinalist } = await import('@/server/actions/finalists')
+    expect(await getPublicFinalist('3')).toBeNull()
+    expect(await getPublicFinalist('4')).toBeNull()
+    expect(await getPublicFinalist('5')).toMatchObject({ id: '5', profile: { tahun: '2026' } })
   })
 })
 
@@ -174,6 +197,15 @@ describe('getReigningPair', () => {
 })
 
 describe('updateFinalistData', () => {
+  it('checks admin authorization before reading or writing', async () => {
+    mockRequireAdmin.mockRejectedValue(new Error('Forbidden'))
+    const { updateFinalistData } = await import('@/server/actions/finalists')
+    await expect(updateFinalistData({ applicant_id: '1', tahun: '2026' })).rejects.toThrow('Forbidden')
+    expect(mockLocalQuery).not.toHaveBeenCalled()
+    expect(mockLocalUpdate).not.toHaveBeenCalled()
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
   it('updates finalist applicant fields and creates profile if missing', async () => {
     const { updateFinalistData } = await import('@/server/actions/finalists')
     const result = await updateFinalistData({ applicant_id: '2', tahun: '2026', full_name: 'Bob Updated' })
@@ -194,6 +226,21 @@ describe('updateFinalistData', () => {
     const { updateFinalistData } = await import('@/server/actions/finalists')
     const result = await updateFinalistData({ applicant_id: '', tahun: '' } as any)
     expect(result.error).toBeDefined()
+  })
+
+  it('does not report success or save a profile when the applicant update failed', async () => {
+    mockLocalUpdate.mockReturnValueOnce(null)
+    const { updateFinalistData } = await import('@/server/actions/finalists')
+    const result = await updateFinalistData({ applicant_id: '2', full_name: 'Updated Name', tahun: '2026' })
+    expect(result.error).toMatch(/Gagal memperbarui peserta/)
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
+  it('does not report success when the profile update failed', async () => {
+    mockLocalUpdate.mockReturnValueOnce(null)
+    const { updateFinalistData } = await import('@/server/actions/finalists')
+    const result = await updateFinalistData({ applicant_id: '1', instagram: '@updated', tahun: '2026' })
+    expect(result.error).toMatch(/Gagal memperbarui profil/)
   })
 })
 
