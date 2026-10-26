@@ -79,7 +79,7 @@ export function RegisterForm({ auditionStart }: { auditionStart: string }) {
 
   useEffect(() => {
     getFaculties().then(setFaculties).catch(() => {})
-    getStudyPrograms().then(setStudyPrograms).catch(() => {})
+    getStudyPrograms(undefined, true).then(setStudyPrograms).catch(() => {})
   }, [])
 
   const stepSchemas = createRegistrationStepSchema(auditionStart)

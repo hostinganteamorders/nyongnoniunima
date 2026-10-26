@@ -17,16 +17,19 @@ export async function getFaculties() {
 }
 
 // ─── Study Programs ───
-export async function getStudyPrograms(facultyId?: string) {
+export async function getStudyPrograms(facultyId?: string, activeOnly = false) {
   if (isUsingLocalDb()) {
     let result = localQuery<any>('study_programs', { orderBy: { column: 'name', direction: 'ASC' } }) || []
     if (facultyId) result = result.filter((sp: any) => sp.faculty_id === facultyId)
+    if (activeOnly) result = result.filter((sp: any) => sp.is_active === 1 || sp.is_active === true)
     return result
   }
   const supabase = await createServerSupabaseClient()
   let query = supabase.from('study_programs').select('*').order('name')
   if (facultyId) query = query.eq('faculty_id', facultyId)
-  const { data } = await query as any
+  if (activeOnly) query = query.eq('is_active', true)
+  const { data, error } = await query as any
+  if (error) throw new Error(error.message)
   return data || []
 }
 

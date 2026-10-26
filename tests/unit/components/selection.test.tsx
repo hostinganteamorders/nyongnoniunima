@@ -262,7 +262,7 @@ describe('Selection admin', () => {
     await user.click(screen.getByRole('button', { name: 'Simpan Draf Pengumuman' }))
     await waitFor(() => expect(title).toHaveValue('Judul baru'))
     expect(saveSelectionAnnouncement).toHaveBeenCalledWith(2026, '  Judul baru  ', initial.announcement!.body)
-    expect(screen.getByRole('button', { name: 'Terbitkan Pengumuman Finalis' })).toBeEnabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Terbitkan Pengumuman Finalis' })).toBeEnabled())
     expect(publishFinalists).not.toHaveBeenCalled()
   })
 

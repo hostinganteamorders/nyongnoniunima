@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, Trash2, X, Eye } from 'lucide-react'
+import { Plus, Search, Trash2, X, Eye, Download, Loader2 } from 'lucide-react'
 import { updateApplicantStatus, deleteApplicant, createApplicant } from '@/server/actions/applicants'
 import { getFaculties, getStudyPrograms } from '@/server/actions/unima'
 import { useRouter } from 'next/navigation'
@@ -84,6 +84,9 @@ export function ApplicantsClient({
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState<string | null>(null)
+  const [exportScope, setExportScope] = useState<'all' | 'search'>('all')
+  const [exporting, setExporting] = useState(false)
+  const exportInFlight = useRef(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [form, setForm] = useState({
     full_name: '', email: '', phone: '', date_of_birth: '', address: '',
@@ -138,6 +141,65 @@ export function ApplicantsClient({
       a.email.toLowerCase().includes(search.toLowerCase()) ||
       a.city.toLowerCase().includes(search.toLowerCase()),
   )
+
+  const exportEmpty = (exportScope === 'search' ? filtered.length : applicants.length) === 0
+
+  const handleExport = async () => {
+    if (exportInFlight.current || exportEmpty) return
+    exportInFlight.current = true
+    setNotification(null)
+    setExporting(true)
+    let errorMessage = 'Gagal mengekspor Excel. Periksa koneksi Anda dan coba lagi.'
+    try {
+      const params = new URLSearchParams({ scope: exportScope })
+      if (exportScope === 'search') params.set('q', search)
+      const response = await fetch(`/api/admin/applicants/export?${params}`, { cache: 'no-store' })
+      if (!response.ok) {
+        errorMessage = 'Gagal mengekspor Excel. Silakan coba lagi.'
+        if (response.status === 401 || response.status === 403) {
+          errorMessage = 'Silakan login kembali dengan akun admin untuk mengekspor pendaftar.'
+        } else {
+          const body = await response.json().catch(() => null)
+          if (typeof body?.error === 'string' && body.error.trim()) errorMessage = body.error
+        }
+        throw new Error(errorMessage)
+      }
+
+      const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase()
+      if (contentType !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+        errorMessage = 'Respons ekspor bukan file Excel yang valid. Silakan coba lagi.'
+        throw new Error(errorMessage)
+      }
+      errorMessage = 'File Excel kosong atau tidak dapat diunduh. Silakan coba lagi.'
+      const blob = await response.blob()
+      if (!blob.size) throw new Error(errorMessage)
+
+      const disposition = response.headers.get('content-disposition') || ''
+      const match = /;\s*filename=(?:"([^"]*)"|([^;\s]+))(?=\s*(?:;|$))/i.exec(disposition)
+      const candidate = match?.[1] ?? match?.[2] ?? ''
+      const filename = /^attachment(?:\s*;|$)/i.test(disposition)
+        && /^[a-z0-9][a-z0-9 _().-]*\.xlsx$/i.test(candidate)
+        && !candidate.includes('..') && candidate.length <= 200
+        ? candidate : 'pendaftar-unima.xlsx'
+      const anchor = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      try {
+        anchor.href = url
+        anchor.download = filename
+        document.body.appendChild(anchor)
+        anchor.click()
+      } finally {
+        anchor.remove()
+        // Give the browser time to consume the download URL before releasing it.
+        setTimeout(() => URL.revokeObjectURL(url), 0)
+      }
+    } catch {
+      setNotification({ type: 'error', message: errorMessage })
+    } finally {
+      exportInFlight.current = false
+      setExporting(false)
+    }
+  }
 
   const handleStatusChange = async (id: string, status: string) => {
     setLoading(id)
@@ -199,14 +261,35 @@ export function ApplicantsClient({
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-dark-text">Pendaftar</h1>
-        <Button asChild variant="outline"><Link href="/admin/selection">Seleksi & Pengumuman</Link></Button>
-        <Button onClick={() => setShowAdd(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Tambah Pendaftar
-        </Button>
+        <div className="flex w-full flex-wrap items-end gap-3 lg:w-auto">
+          <Button asChild variant="outline"><Link href="/admin/selection">Seleksi & Pengumuman</Link></Button>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="applicants-export-scope" className="text-xs text-muted">Cakupan ekspor</Label>
+              <select
+                id="applicants-export-scope"
+                value={exportScope}
+                onChange={(e) => setExportScope(e.target.value as 'all' | 'search')}
+                disabled={exporting}
+                className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30 disabled:opacity-50"
+              >
+                <option value="all">Semua pendaftar</option>
+                <option value="search">Hasil pencarian ({filtered.length})</option>
+              </select>
+            </div>
+            <Button variant="outline" onClick={handleExport} disabled={exporting || exportEmpty} aria-busy={exporting}>
+              {exporting ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="mr-2 h-4 w-4" />}
+              {exporting ? 'Mengekspor...' : 'Ekspor Excel'}
+            </Button>
+          </div>
+          <Button onClick={() => setShowAdd(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Tambah Pendaftar
+          </Button>
+        </div>
       </div>
 
       {notification && (
-        <div className={`mb-4 rounded-lg p-3 text-sm ${notification.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+        <div role={notification.type === 'error' ? 'alert' : 'status'} className={`mb-4 rounded-lg p-3 text-sm ${notification.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
           {notification.message}
         </div>
       )}

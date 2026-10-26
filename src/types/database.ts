@@ -350,6 +350,7 @@ export interface Database {
           faculty_id: string
           name: string
           code: string
+          is_active: boolean
           created_at: string
         }
         Insert: {
@@ -357,6 +358,7 @@ export interface Database {
           faculty_id: string
           name: string
           code: string
+          is_active?: boolean
           created_at?: string
         }
         Update: {
@@ -364,6 +366,7 @@ export interface Database {
           faculty_id?: string
           name?: string
           code?: string
+          is_active?: boolean
           created_at?: string
         }
       }

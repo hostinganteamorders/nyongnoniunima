@@ -189,9 +189,13 @@ def main():
         'GET', '/rest/v1/faculties', params={'select': 'id,code'}) or []}
     local_fac = list(cur.execute('SELECT * FROM faculties ORDER BY name'))
     fac_id_map: dict[str, str] = {}  # local id -> supabase id
+    faculty_aliases = {'FIP': 'FIPP', 'FE': 'FEB', 'FOK': 'FIKKM', 'FMIPA': 'FMIPAK'}
     for row in local_fac:
-        if row['code'] in supa_fac:
-            fac_id_map[row['id']] = supa_fac[row['code']]
+        code = faculty_aliases.get(row['code'], row['code'])
+        if code not in supa_fac:
+            code = row['code']
+        if code in supa_fac:
+            fac_id_map[row['id']] = supa_fac[code]
             total['skip'] += 1
             continue
         res = sb.mutate('POST', '/rest/v1/faculties', {'name': row['name'], 'code': row['code']})
@@ -214,15 +218,17 @@ def main():
             continue
         existing = supa_sp.get(row['code'])
         if existing:
-            if existing['name'] != row['name'] or existing['faculty_id'] != fac_id:
-                sb.mutate('PATCH', '/rest/v1/study_programs', {'name': row['name'], 'faculty_id': fac_id},
-                          params={'code': f'eq.{row["code"]}'})
-                n_upd += 1
-            else:
-                n_skip += 1
+            # The target catalog owns existing names, faculties and active flags.
+            if existing['faculty_id'] != fac_id:
+                print(f'  WARN: kode {row["code"]} sudah ada di faculty_id '
+                      f'{existing["faculty_id"]}, bukan {fac_id}; dilewati')
+                total['warn'] += 1
+            n_skip += 1
         else:
-            sb.mutate('POST', '/rest/v1/study_programs',
-                      {'name': row['name'], 'code': row['code'], 'faculty_id': fac_id})
+            rec = {'name': row['name'], 'code': row['code'], 'faculty_id': fac_id}
+            if 'is_active' in row.keys():
+                rec['is_active'] = bool(row['is_active'])
+            sb.mutate('POST', '/rest/v1/study_programs', rec)
             n_ins += 1
     total['insert'] += n_ins
     total['update'] += n_upd

@@ -55,6 +55,7 @@ async function completeForm({ semester = '3', gender = 'Perempuan', height = '16
   await user.type(screen.getByLabelText('Semester'), semester)
   if (Number(semester) >= 3) await user.type(screen.getByLabelText('IPK'), '3.75')
   await screen.findByRole('option', { name: 'Fakultas Ilmu Pendidikan' })
+  expect(getStudyPrograms).toHaveBeenCalledWith(undefined, true)
   await user.selectOptions(screen.getByLabelText('Fakultas'), 'fip')
   await screen.findByRole('option', { name: 'Pendidikan Guru Sekolah Dasar' })
   await user.selectOptions(screen.getByLabelText('Program Studi'), 'fip_pgsd')

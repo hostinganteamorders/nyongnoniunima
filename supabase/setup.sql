@@ -349,6 +349,7 @@ CREATE TABLE IF NOT EXISTS public.study_programs (
   faculty_id UUID NOT NULL REFERENCES public.faculties(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   code TEXT NOT NULL UNIQUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -489,33 +490,56 @@ CREATE INDEX IF NOT EXISTS idx_current_titleholders_sort ON public.current_title
 CREATE INDEX IF NOT EXISTS idx_current_titleholders_title ON public.current_titleholders(title);
 
 -- Seed faculties (nama & kode resmi UNIMA — web.unima.ac.id/fakultas)
+-- Normalize legacy-only rows before canonical seeds can create duplicates.
+BEGIN;
+LOCK TABLE public.faculties IN SHARE ROW EXCLUSIVE MODE;
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM (VALUES ('FIP', 'FIPP'), ('FE', 'FEB'), ('FOK', 'FIKKM'), ('FMIPA', 'FMIPAK')) AS c(legacy_code, code)
+    JOIN public.faculties f ON f.code IN (c.legacy_code, c.code)
+    GROUP BY c.code HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Ambiguous faculty codes in academic catalog';
+  END IF;
+
+  UPDATE public.faculties f SET code = c.code, name = c.name
+  FROM (VALUES
+    ('FIP', 'FIPP', 'Fakultas Ilmu Pendidikan dan Psikologi'),
+    ('FE', 'FEB', 'Fakultas Ekonomi dan Bisnis'),
+    ('FOK', 'FIKKM', 'Fakultas Ilmu Keolahragaan dan Kesehatan'),
+    ('FMIPA', 'FMIPAK', 'Fakultas Matematika, Ilmu Pengetahuan Alam dan Kebumian')
+  ) AS c(legacy_code, code, name)
+  WHERE f.code = c.legacy_code;
+END $$;
+
 INSERT INTO public.faculties (name, code) VALUES
   ('Fakultas Ilmu Pendidikan dan Psikologi', 'FIPP'),
   ('Fakultas Bahasa dan Seni', 'FBS'),
   ('Fakultas Ilmu Sosial dan Hukum', 'FISH'),
-  ('Fakultas MIPA dan Kebumian', 'FMIPAK'),
+  ('Fakultas Matematika, Ilmu Pengetahuan Alam dan Kebumian', 'FMIPAK'),
   ('Fakultas Teknik', 'FT'),
   ('Fakultas Ekonomi dan Bisnis', 'FEB'),
-  ('Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'FIKKM'),
+  ('Fakultas Ilmu Keolahragaan dan Kesehatan', 'FIKKM'),
   ('Fakultas Kedokteran', 'FK')
 ON CONFLICT (code) DO NOTHING;
+COMMIT;
 
 -- Seed study programs
 INSERT INTO public.study_programs (faculty_id, name, code) 
 SELECT f.id, sp.name, sp.code
 FROM (VALUES 
-  ('FIPP', 'PGSD', 'PGSD'),
-  ('FIPP', 'PG PAUD', 'PGPAUD'),
-  ('FIPP', 'Bimbingan dan Konseling', 'BK'),
-  ('FIPP', 'Pendidikan Luar Biasa', 'PLB'),
+  ('FIPP', 'Pendidikan Guru Sekolah Dasar', 'PGSD'),
+  ('FIPP', 'Pendidikan Anak Usia Dini', 'PGPAUD'),
+  ('FIPP', 'Bimbingan Konseling', 'BK'),
+  ('FIPP', 'Pendidikan Khusus', 'PLB'),
   ('FBS', 'Pendidikan Bahasa Inggris', 'PBI'),
-  ('FBS', 'Pendidikan Bahasa Indonesia', 'PBInd'),
+  ('FBS', 'Pendidikan Bahasa dan Sastra Indonesia', 'PBInd'),
   ('FBS', 'Pendidikan Seni Drama, Tari dan Musik', 'Sendratasik'),
   ('FISH', 'Ilmu Hukum', 'IH'),
   ('FISH', 'Ilmu Sosial', 'IS'),
   ('FISH', 'Pendidikan Sejarah', 'PS'),
   ('FISH', 'Pendidikan Geografi', 'PG'),
-  ('FISH', 'Pendidikan Pancasila dan Kewarganegaraan', 'PPKN'),
+  ('FISH', 'PPKn', 'PPKN'),
   ('FMIPAK', 'Pendidikan Matematika', 'PMat'),
   ('FMIPAK', 'Pendidikan IPA', 'PIPA'),
   ('FMIPAK', 'Pendidikan Biologi', 'PBio'),
@@ -528,7 +552,7 @@ FROM (VALUES
   ('FT', 'Pendidikan Teknik Elektro', 'PTE'),
   ('FT', 'Pendidikan Teknik Bangunan', 'PTB'),
   ('FT', 'Teknik Informatika', 'TI'),
-  ('FT', 'Pendidikan Teknologi Informasi dan Komunikasi', 'PTIK'),
+  ('FT', 'Pendidikan Teknik Informatika dan Komunikasi', 'PTIK'),
   ('FEB', 'Pendidikan Ekonomi', 'PE'),
   ('FEB', 'Manajemen', 'Man'),
   ('FEB', 'Akuntansi', 'Akun'),
@@ -787,4 +811,133 @@ GRANT EXECUTE ON FUNCTION public.guard_applicant_registration() TO service_role;
 DROP TRIGGER IF EXISTS guard_applicant_registration ON public.applicants;
 CREATE TRIGGER guard_applicant_registration BEFORE INSERT ON public.applicants
   FOR EACH ROW EXECUTE FUNCTION public.guard_applicant_registration();
+COMMIT;
+
+-- Bagian 7: academic catalog (same SQL as migration 00011).
+-- Preserve catalog IDs and historical references; retired programs remain readable.
+BEGIN;
+
+ALTER TABLE public.study_programs ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+LOCK TABLE public.faculties, public.study_programs IN SHARE ROW EXCLUSIVE MODE;
+
+CREATE TEMP TABLE academic_faculties (code text PRIMARY KEY, legacy_code text, name text NOT NULL) ON COMMIT DROP;
+INSERT INTO academic_faculties VALUES
+  ('FIKKM', 'FOK', 'Fakultas Ilmu Keolahragaan dan Kesehatan'),
+  ('FIPP', 'FIP', 'Fakultas Ilmu Pendidikan dan Psikologi'),
+  ('FISH', NULL, 'Fakultas Ilmu Sosial dan Hukum'),
+  ('FMIPAK', 'FMIPA', 'Fakultas Matematika, Ilmu Pengetahuan Alam dan Kebumian'),
+  ('FEB', 'FE', 'Fakultas Ekonomi dan Bisnis'),
+  ('FBS', NULL, 'Fakultas Bahasa dan Seni'),
+  ('FT', NULL, 'Fakultas Teknik'),
+  ('FK', NULL, 'Fakultas Kedokteran');
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM academic_faculties c JOIN public.faculties f ON f.code IN (c.code, c.legacy_code)
+    GROUP BY c.code HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Ambiguous faculty codes in academic catalog';
+  END IF;
+END $$;
+
+UPDATE public.faculties f SET code = c.code, name = c.name
+FROM academic_faculties c
+WHERE f.code IN (c.code, c.legacy_code)
+  AND (f.code = c.legacy_code OR c.code IN ('FIKKM', 'FMIPAK'))
+  AND (f.code IS DISTINCT FROM c.code OR f.name IS DISTINCT FROM c.name);
+
+INSERT INTO public.faculties (code, name)
+SELECT code, name FROM academic_faculties ON CONFLICT (code) DO NOTHING;
+
+CREATE TEMP TABLE academic_programs (
+  faculty_code text NOT NULL, code text PRIMARY KEY, name text NOT NULL, is_active boolean NOT NULL
+) ON COMMIT DROP;
+INSERT INTO academic_programs VALUES
+  ('FIKKM', 'IK', 'Ilmu Keolahragaan', true),
+  ('FIKKM', 'PKO', 'Pendidikan Kepelatihan Olahraga', true),
+  ('FIKKM', 'PJKR', 'Pendidikan Jasmani, Kesehatan dan Rekreasi', true),
+  ('FIKKM', 'IKM', 'Ilmu Kesehatan Masyarakat', true),
+  ('FIPP', 'PGSD', 'Pendidikan Guru Sekolah Dasar', true),
+  ('FIPP', 'PSI', 'Psikologi', true),
+  ('FIPP', 'PGPAUD', 'Pendidikan Anak Usia Dini', true),
+  ('FIPP', 'BK', 'Bimbingan Konseling', true),
+  ('FIPP', 'PLB', 'Pendidikan Khusus', true),
+  ('FISH', 'PG', 'Pendidikan Geografi', true),
+  ('FISH', 'GEO', 'Geografi', true),
+  ('FISH', 'IAN', 'Ilmu Administrasi Negara', true),
+  ('FISH', 'SOS', 'Sosiologi', true),
+  ('FISH', 'IH', 'Ilmu Hukum', true),
+  ('FISH', 'PIPS', 'Pendidikan IPS', true),
+  ('FISH', 'PS', 'Pendidikan Sejarah', true),
+  ('FISH', 'PPKN', 'PPKn', true),
+  ('FMIPAK', 'PKim', 'Pendidikan Kimia', true),
+  ('FMIPAK', 'Kim', 'Kimia', true),
+  ('FMIPAK', 'PBio', 'Pendidikan Biologi', true),
+  ('FMIPAK', 'Bio', 'Biologi', true),
+  ('FMIPAK', 'PFis', 'Pendidikan Fisika', true),
+  ('FMIPAK', 'Fis', 'Fisika', true),
+  ('FMIPAK', 'PGF', 'Pendidikan Geofisika', true),
+  ('FMIPAK', 'IL', 'Ilmu Lingkungan', true),
+  ('FMIPAK', 'PMat', 'Pendidikan Matematika', true),
+  ('FMIPAK', 'PIPA', 'Pendidikan IPA', true),
+  ('FEB', 'Akun', 'Akuntansi', true),
+  ('FEB', 'Man', 'Manajemen', true),
+  ('FEB', 'IE', 'Ilmu Ekonomi', true),
+  ('FEB', 'PE', 'Pendidikan Ekonomi', true),
+  ('FEB', 'D3MP', 'D3 Manajemen Perusahaan', true),
+  ('FBS', 'BSI', 'Bahasa dan Sastra Inggris', true),
+  ('FBS', 'PBInd', 'Pendidikan Bahasa dan Sastra Indonesia', true),
+  ('FBS', 'PBI', 'Pendidikan Bahasa Inggris', true),
+  ('FBS', 'PBJ', 'Pendidikan Bahasa Jepang', true),
+  ('FBS', 'PBJER', 'Pendidikan Bahasa Jerman', true),
+  ('FBS', 'PBP', 'Pendidikan Bahasa Prancis', true),
+  ('FBS', 'PBSM', 'Pendidikan Bahasa dan Sastra Mandarin', true),
+  ('FBS', 'PSR', 'Pendidikan Seni Rupa', true),
+  ('FT', 'PKK', 'Pendidikan Kesejahteraan Keluarga', true),
+  ('FT', 'TS', 'Teknik Sipil', true),
+  ('FT', 'PTE', 'Pendidikan Teknik Elektro', true),
+  ('FT', 'TM', 'Teknik Mesin', true),
+  ('FT', 'PTM', 'Pendidikan Teknik Mesin', true),
+  ('FT', 'TI', 'Teknik Informatika', true),
+  ('FT', 'PTIK', 'Pendidikan Teknik Informatika dan Komunikasi', true),
+  ('FK', 'Ked', 'Kedokteran', true),
+  ('FK', 'PPD', 'Pendidikan Profesi Dokter', true),
+  ('FBS', 'Sendratasik', 'Pendidikan Seni Drama, Tari dan Musik', false),
+  ('FISH', 'IS', 'Ilmu Sosial', false),
+  ('FT', 'PTB', 'Pendidikan Teknik Bangunan', false);
+
+-- A globally unique code is not permission to move an existing program.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM academic_programs c
+    JOIN public.study_programs p ON p.code = c.code
+    JOIN public.faculties f ON f.code = c.faculty_code
+    WHERE p.faculty_id <> f.id
+  ) THEN
+    RAISE EXCEPTION 'Study program code belongs to another faculty';
+  END IF;
+END $$;
+
+INSERT INTO public.study_programs AS p (faculty_id, code, name, is_active)
+SELECT f.id, c.code, c.name, c.is_active FROM academic_programs c
+JOIN public.faculties f ON f.code = c.faculty_code
+ON CONFLICT (code) DO UPDATE SET name = excluded.name, is_active = excluded.is_active
+WHERE p.name IS DISTINCT FROM excluded.name OR p.is_active IS DISTINCT FROM excluded.is_active;
+
+-- UUID strings and published selection snapshots are deliberately not rewritten.
+DO $$ DECLARE target text; BEGIN
+  FOREACH target IN ARRAY ARRAY['applicants', 'titleholders', 'current_titleholders'] LOOP
+    EXECUTE format($query$
+      UPDATE public.%I AS t SET faculty = 'Fakultas Ilmu Keolahragaan dan Kesehatan'
+      WHERE trim(t.faculty) IN ('FIKKM', 'FOK', 'Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'Fakultas Olahraga dan Kesehatan')
+        AND NOT EXISTS (SELECT 1 FROM public.faculties f WHERE f.id::text = t.faculty)
+    $query$, target);
+    EXECUTE format($query$
+      UPDATE public.%I AS t SET faculty = 'Fakultas Matematika, Ilmu Pengetahuan Alam dan Kebumian'
+      WHERE trim(t.faculty) IN ('FMIPAK', 'FMIPA', 'Fakultas MIPA dan Kebumian', 'Fakultas Matematika dan Ilmu Pengetahuan Alam')
+        AND NOT EXISTS (SELECT 1 FROM public.faculties f WHERE f.id::text = t.faculty)
+    $query$, target);
+  END LOOP;
+END $$;
+
 COMMIT;

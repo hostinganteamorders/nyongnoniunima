@@ -10,7 +10,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 function query(result: { data?: unknown; error?: { message: string; code?: string } | null }) {
   const builder: Record<string, any> = { then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: null, error: null, ...result }).then(resolve) }
-  for (const method of ['select', 'insert', 'update', 'eq', 'in', 'or', 'not', 'order', 'single', 'maybeSingle']) builder[method] = vi.fn(() => builder)
+  for (const method of ['select', 'insert', 'update', 'eq', 'gt', 'limit', 'in', 'or', 'not', 'order', 'single', 'maybeSingle']) builder[method] = vi.fn(() => builder)
   return builder
 }
 
@@ -22,6 +22,7 @@ const VALID_REGISTRATION = {
   essay: 'I want to join Nyong Noni UNIMA because I am passionate about culture and tourism promotion in North Sulawesi.', consent: 'true',
 }
 const PRIMARY_KEY_CONFLICT = { code: '23505', message: 'duplicate key value violates unique constraint "applicants_pkey"' }
+const ACTIVE_PROGRAM = { faculty_id: 'ft', is_active: true }
 
 function registrationForm() {
   const form = new FormData()
@@ -30,7 +31,7 @@ function registrationForm() {
   return form
 }
 
-function mockReplay(form: FormData, overrides: Record<string, unknown> = {}) {
+function mockReplay(form: FormData, overrides: Record<string, unknown> = {}, program: typeof ACTIVE_PROGRAM | null = ACTIVE_PROGRAM) {
   const normalized = registrationSchema.parse({ ...Object.fromEntries(form.entries()), consent: true })
   const existing = {
     ...normalized, ipk: normalized.ipk ?? null, instagram: normalized.instagram || null, tiktok: normalized.tiktok || null,
@@ -39,7 +40,12 @@ function mockReplay(form: FormData, overrides: Record<string, unknown> = {}) {
   const insert = query({ error: PRIMARY_KEY_CONFLICT })
   const lookup = query({ data: existing })
   let calls = 0
-  mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null }) : ++calls === 1 ? insert : lookup)
+  mocks.from.mockImplementation((table: string) => {
+    if (table === 'settings') return query({ data: null })
+    if (table === 'study_programs') return query({ data: program })
+    if (program?.is_active && program.faculty_id === VALID_REGISTRATION.faculty && ++calls === 1) return insert
+    return lookup
+  })
   return { insert, lookup, existing }
 }
 
@@ -111,6 +117,7 @@ describe('remote public reads and registration', () => {
     const record = query({ data: { id: 'registered', email: 'private@example.com', nim: 'private', selection_year: 2027 } })
     const settings = (value: unknown) => {
       mocks.from.mockImplementation((table: string) => {
+        if (table === 'study_programs') return query({ data: ACTIVE_PROGRAM })
         if (table !== 'settings') return record
         const builder = query({ data: null })
         builder.eq.mockImplementation((_column: string, key: string) => query({ data: key === 'selection_year' ? { value } : key === 'audition_start_2027' ? { value: '2027-10-26' } : null }))
@@ -142,7 +149,8 @@ describe('remote public reads and registration', () => {
       await submitRegistration(form)
       expect(record.insert).toHaveBeenLastCalledWith(expect.objectContaining({ selection_year: Number(AUDITION_START.slice(0, 4)) }))
     }
-    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null }) : record)
+    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null })
+      : table === 'study_programs' ? query({ data: ACTIVE_PROGRAM }) : record)
     await submitRegistration(form)
     expect(record.insert).toHaveBeenLastCalledWith(expect.objectContaining({ selection_year: Number(AUDITION_START.slice(0, 4)) }))
     mocks.getAdminClient.mockClear()
@@ -165,7 +173,7 @@ describe('remote public reads and registration', () => {
   })
 
   it('merges published selection and profile data for admin loaders without changing the stored status', async () => {
-    const rows = [{ id: 'published', status: 'verified', selection_year: 2026 }, { id: 'draft', status: 'verified', selection_year: 2026 }]
+    const rows = [{ id: 'published', status: 'verified', selection_year: 2026, created_at: '2026-10-02' }, { id: 'draft', status: 'verified', selection_year: 2026, created_at: '2026-10-01' }]
     mocks.from.mockImplementation((table: string) => {
       if (table === 'applicants') return query({ data: rows })
       if (table === 'selection_entries') return query({ data: [{ applicant_id: 'published', year: 2026, stage: 'finalist', semifinalist_at: '2026-10-01' }, { applicant_id: 'draft', year: 2026, stage: 'finalist_draft' }] })
@@ -192,6 +200,49 @@ describe('remote public reads and registration', () => {
 })
 
 describe('remote public registration idempotency', () => {
+  it.each([
+    null,
+    { faculty_id: 'ft', is_active: false },
+    { faculty_id: 'fip', is_active: true },
+  ])('acknowledges an exact historical replay for invalid catalog entry %j without inserting', async program => {
+    const form = registrationForm()
+    const { insert, lookup } = mockReplay(form, {}, program)
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    expect(await submitRegistration(form)).toEqual({ data: { id: form.get('submission_id') } })
+    expect(insert.insert).not.toHaveBeenCalled()
+    expect(lookup.insert).not.toHaveBeenCalled()
+    expect(lookup.eq).toHaveBeenCalledExactlyOnceWith('id', form.get('submission_id'))
+    expect(lookup.select).toHaveBeenCalledWith(expect.stringContaining('selection_year'))
+    expect(lookup.select).not.toHaveBeenCalledWith('*')
+  })
+
+  it.each([...Object.keys(VALID_REGISTRATION), 'instagram', 'tiktok', 'facebook', 'selection_year', 'id'])('rejects an archived replay with mismatched %s without inserting', async key => {
+    const form = registrationForm()
+    const value = key === 'consent' ? false : key === 'selection_year' ? 2025 : 'different'
+    const { insert, lookup } = mockReplay(form, { [key]: value }, { faculty_id: 'ft', is_active: false })
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    const result = await submitRegistration(form)
+    expect(result.data).toBeUndefined()
+    expect(result.error).toMatch(/tidak aktif/)
+    expect(insert.insert).not.toHaveBeenCalled()
+    expect(lookup.insert).not.toHaveBeenCalled()
+    expect(lookup.update).not.toHaveBeenCalled()
+  })
+
+  it('does not acknowledge an archived replay when the existing-row lookup fails', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const form = registrationForm()
+    const { lookup } = mockReplay(form, {}, { faculty_id: 'ft', is_active: false })
+    lookup.maybeSingle.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'private lookup error' } })
+    const { submitRegistration } = await import('@/server/actions/applicants')
+    const result = await submitRegistration(form)
+    expect(result.data).toBeUndefined()
+    expect(result.error).toMatch(/belum dapat dikonfirmasi/)
+    expect(result.error).not.toContain('private')
+    expect(log).toHaveBeenCalledOnce()
+    expect(lookup.insert).not.toHaveBeenCalled()
+  })
+
   it('accepts only an exact ID/year/payload match and returns no stored private fields', async () => {
     const form = registrationForm()
     const { insert, lookup } = mockReplay(form, { semester: '4', height_cm: '175.00', weight_kg: '60.0', ipk: '3.50', consent: true })
@@ -234,7 +285,8 @@ describe('remote public registration idempotency', () => {
   ])('does not treat non-primary-key insert errors as a replay: %j', async error => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const insert = query({ error })
-    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null }) : insert)
+    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null })
+      : table === 'study_programs' ? query({ data: ACTIVE_PROGRAM }) : insert)
     const { submitRegistration } = await import('@/server/actions/applicants')
     const result = await submitRegistration(registrationForm())
     expect(result.data).toBeUndefined()
@@ -274,6 +326,7 @@ describe('remote public registration idempotency', () => {
     let calls = 0
     mocks.from.mockImplementation((table: string) => {
       if (table === 'settings') return query({ data: null })
+      if (table === 'study_programs') return query({ data: ACTIVE_PROGRAM })
       calls++
       return calls === 1 ? first : calls === 2 ? duplicate : query({ data: committed })
     })
@@ -290,11 +343,49 @@ describe('remote public registration idempotency', () => {
     const { revalidatePath } = await import('next/cache')
     const row = { ...registrationSchema.parse({ ...VALID_REGISTRATION, consent: true }), id: crypto.randomUUID(), selection_year: 2026, status: 'pending' }
     const insert = query({ data: row })
-    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null }) : insert)
+    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null })
+      : table === 'study_programs' ? query({ data: ACTIVE_PROGRAM }) : insert)
     const { createApplicant } = await import('@/server/actions/applicants')
     expect(await createApplicant(row)).toEqual({ data: row })
     expect(insert.select).toHaveBeenCalledWith('*')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/applicants')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/finalists')
+  })
+})
+
+describe.each(['public', 'admin'])('remote %s catalog validation', source => {
+  it.each([
+    { program: null, message: /tidak ditemukan/ },
+    { program: { faculty_id: 'ft', is_active: false }, message: /tidak aktif/ },
+    { program: { faculty_id: 'ft' }, message: /tidak aktif/ },
+    { program: { faculty_id: 'fip', is_active: true }, message: /tidak sesuai.*fakultas/ },
+  ])('rejects $program without inserting', async ({ program, message }) => {
+    const catalog = query({ data: program })
+    const applicants = query({ data: null })
+    mocks.from.mockImplementation((table: string) => table === 'settings' ? query({ data: null }) : table === 'study_programs' ? catalog : applicants)
+    const { createApplicant, submitRegistration } = await import('@/server/actions/applicants')
+    const result = source === 'admin'
+      ? await createApplicant(registrationSchema.parse({ ...VALID_REGISTRATION, consent: true }))
+      : await submitRegistration(registrationForm())
+    expect(result.data).toBeUndefined()
+    expect(result.error).toMatch(message)
+    expect(catalog.select).toHaveBeenCalledExactlyOnceWith('faculty_id,is_active')
+    expect(catalog.eq).toHaveBeenCalledExactlyOnceWith('id', VALID_REGISTRATION.study_program)
+    expect(catalog.maybeSingle).toHaveBeenCalledOnce()
+    expect(applicants.insert).not.toHaveBeenCalled()
+    if (source === 'admin') expect(mocks.from.mock.calls.filter(([table]) => table === 'applicants')).toHaveLength(0)
+  })
+
+  it('propagates catalog read errors without attempting an insert or replay', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.from.mockImplementation((table: string) => query(table === 'settings' ? { data: null }
+      : { error: { code: 'XX000', message: 'private catalog error' } }))
+    const { createApplicant, submitRegistration } = await import('@/server/actions/applicants')
+    const result = source === 'admin'
+      ? await createApplicant(registrationSchema.parse({ ...VALID_REGISTRATION, consent: true }))
+      : await submitRegistration(registrationForm())
+    expect(result.data).toBeUndefined()
+    expect(result.error).toBeTruthy()
+    expect(mocks.from.mock.calls.filter(([table]) => table === 'applicants')).toHaveLength(0)
   })
 })

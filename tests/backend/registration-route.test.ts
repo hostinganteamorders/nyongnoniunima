@@ -129,6 +129,38 @@ describe('POST /api/register with real local persistence', () => {
     expect(db.prepare('SELECT total_changes() AS n').get()).toEqual(changes)
   })
 
+  it.each(['unknown', 'inactive', 'mismatch', 'missing'])('rejects %s study programs through the public route without inserting', async invalid => {
+    const form = registrationForm()
+    if (invalid === 'unknown') form.set('study_program', 'Teknik Informatika')
+    if (invalid === 'missing') form.delete('study_program')
+    if (invalid === 'inactive') db.prepare('UPDATE study_programs SET is_active = 0 WHERE id = ?').run(fields.study_program)
+    if (invalid === 'mismatch') form.set('faculty', 'fip')
+    const response = await POST(registrationRequest(form))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: expect.stringMatching(invalid === 'inactive' ? /tidak aktif/
+      : invalid === 'mismatch' ? /tidak sesuai.*fakultas/ : invalid === 'missing' ? /study_program:/ : /tidak ditemukan/) })
+    expect(db.prepare('SELECT * FROM applicants').all()).toEqual([])
+  })
+
+  it('acknowledges only an exact archived-program replay and never inserts a fresh submission', async () => {
+    const form = registrationForm()
+    expect((await POST(registrationRequest(form))).status).toBe(201)
+    const original = db.prepare('SELECT * FROM applicants').all()
+    db.prepare('UPDATE study_programs SET is_active = 0 WHERE id = ?').run(fields.study_program)
+    const replay = await POST(registrationRequest(form))
+    expect(replay.status).toBe(201)
+    expect(await replay.json()).toEqual({ data: { id: form.get('submission_id') } })
+    form.set('essay', `${fields.essay} Perubahan data.`)
+    const changed = await POST(registrationRequest(form))
+    expect(changed.status).toBe(400)
+    expect(await changed.json()).toEqual({ error: expect.stringMatching(/ID pengiriman sudah digunakan/) })
+    form.set('submission_id', crypto.randomUUID())
+    const fresh = await POST(registrationRequest(form))
+    expect(fresh.status).toBe(400)
+    expect(await fresh.json()).toEqual({ error: expect.stringMatching(/tidak aktif/) })
+    expect(db.prepare('SELECT * FROM applicants').all()).toEqual(original)
+  })
+
   it.each(['0', '-25', undefined])('rejects invalid or missing weight %s without inserting', async weight => {
     const form = registrationForm()
     if (weight === undefined) form.delete('weight_kg')

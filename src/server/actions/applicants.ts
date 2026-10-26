@@ -30,6 +30,8 @@ interface ApplicantRecord {
 }
 
 interface FinalistProfile {
+  id: string
+  created_at: string
   applicant_id: string
   instagram: string | null
   photo_url: string | null
@@ -61,11 +63,31 @@ async function insertApplicant(data: RegistrationInput, status: string, selectio
         }
         const announcement = db.prepare('SELECT published_at FROM selection_announcements WHERE year = ?').get(selection_year) as { published_at: string | null } | undefined
         if (announcement?.published_at) return { error: 'Seleksi tahun ini sudah dipublikasikan; pendaftaran ditutup' }
+        const program = db.prepare('SELECT faculty_id, is_active FROM study_programs WHERE id = ?').get(data.study_program) as { faculty_id: string; is_active: number | boolean } | undefined
+        if (!program) return { error: 'Program studi tidak ditemukan. Silakan pilih program studi yang tersedia.' }
+        if (program.faculty_id !== data.faculty) return { error: 'Program studi tidak sesuai dengan fakultas yang dipilih.' }
+        if (program.is_active !== true && program.is_active !== 1) return { error: 'Program studi tidak aktif. Silakan pilih program studi yang tersedia.' }
         return { data: localInsert<ApplicantRecord>('applicants', { ...payload, consent: Number(data.consent), user_id: null, status, id }) }
       }).immediate()
     }
     // The insert trigger checks publication under the same year lock as publish.
     const client = getAdminClient()
+    const { data: program, error: programError } = await client.from('study_programs')
+      .select('faculty_id,is_active').eq('id', data.study_program).maybeSingle()
+    if (programError) throw programError
+    const catalogError = !program ? 'Program studi tidak ditemukan. Silakan pilih program studi yang tersedia.'
+      : program.faculty_id !== data.faculty ? 'Program studi tidak sesuai dengan fakultas yang dipilih.'
+        : program.is_active !== true ? 'Program studi tidak aktif. Silakan pilih program studi yang tersedia.' : null
+    if (catalogError) {
+      // Catalog changes may acknowledge an exact committed replay, never create a new row.
+      if (requestId) {
+        const { data: existing, error: lookupError } = await client.from('applicants')
+          .select(['id', ...Object.keys(payload)].join(',')).eq('id', id).maybeSingle<Record<string, unknown> & { id: string }>()
+        if (lookupError) throw lookupError
+        if (existing && existing.id === id && matches(existing)) return { data: { id } }
+      }
+      return { error: catalogError }
+    }
     const { data: record, error } = await client.from('applicants')
       .insert({ ...payload, user_id: null, status, id }).select(requestId ? 'id' : '*').single()
     if (error) {
@@ -144,14 +166,29 @@ export async function getApplicants() {
     profiles = localQuery('finalist_profiles', { orderBy: { column: 'created_at', direction: 'DESC' } })
   } else {
     const client = getAdminClient()
-    const results = await Promise.all([
-      client.from('applicants').select('*').order('created_at', { ascending: false }),
-      client.from('selection_entries').select('applicant_id, year, stage, semifinalist_at'),
-      client.from('selection_announcements').select('year, published_at').not('published_at', 'is', null),
-      client.from('finalist_profiles').select('*').order('created_at', { ascending: false }),
+    async function readAll<T>(table: string, columns: string, key: keyof T & string): Promise<T[]> {
+      const rows: T[] = []
+      let cursor: string | number | undefined
+      while (true) {
+        let query = client.from(table).select(columns).order(key, { ascending: true }).limit(500)
+        if (cursor !== undefined) query = query.gt(key, cursor)
+        const { data, error } = await query
+        if (error) throw new Error(error.message)
+        if (!data) throw new Error(`Missing ${table} response`)
+        const page = data as unknown as T[]
+        rows.push(...page)
+        if (page.length < 500) return rows
+        cursor = page[page.length - 1][key] as string | number
+      }
+    }
+    ;[applicants, entries, announcements, profiles] = await Promise.all([
+      readAll<typeof applicants[number]>('applicants', '*', 'id'),
+      readAll<typeof entries[number]>('selection_entries', 'applicant_id, year, stage, semifinalist_at', 'applicant_id'),
+      readAll<typeof announcements[number]>('selection_announcements', 'year, published_at', 'year'),
+      readAll<FinalistProfile>('finalist_profiles', '*', 'id'),
     ])
-    for (const result of results) if (result.error) throw new Error(result.error.message)
-    ;[applicants, entries, announcements, profiles] = results.map(r => r.data || []) as [typeof applicants, typeof entries, typeof announcements, typeof profiles]
+    applicants.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || a.id.localeCompare(b.id))
+    profiles.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || a.id.localeCompare(b.id))
   }
   const publishedYears = new Set(announcements.filter(n => n.published_at).map(n => n.year))
   const entryMap = new Map(entries.map(e => [e.applicant_id, e]))

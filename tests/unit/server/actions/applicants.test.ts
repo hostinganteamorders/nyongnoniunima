@@ -8,8 +8,10 @@ const mockLocalDelete = vi.fn(() => true) as any
 const mockIsRegistrationOpen = vi.fn(() => true) as any
 const mockRequireAdmin = vi.fn(async () => ({ user: { id: 'admin-1' }, supabase: null }))
 const mockRun = vi.fn(() => ({ changes: 1 }))
+const mockProgramGet = vi.fn((): any => ({ faculty_id: 'fip', is_active: 1 }))
 const mockPrepare = vi.fn((sql: string) => ({
-  get: vi.fn(() => sql.startsWith('SELECT status') ? { status: 'pending', selection_year: 2026 } : undefined),
+  get: vi.fn(() => sql.startsWith('SELECT status') ? { status: 'pending', selection_year: 2026 }
+    : sql.includes('FROM study_programs') ? mockProgramGet() : undefined),
   run: mockRun,
 }))
 const mockDb = { prepare: mockPrepare, transaction: vi.fn((fn: () => void) => ({ immediate: fn })) }
@@ -70,9 +72,35 @@ beforeEach(() => {
   mockLocalQuery.mockReset().mockReturnValue([])
   mockRequireAdmin.mockResolvedValue({ user: { id: 'admin-1' }, supabase: null })
   mockIsRegistrationOpen.mockReturnValue(true)
+  mockProgramGet.mockReset().mockReturnValue({ faculty_id: 'fip', is_active: 1 })
 })
 
 afterEach(() => vi.restoreAllMocks())
+
+describe.each(['public', 'admin'])('%s catalog validation', source => {
+  it.each([
+    { program: undefined, message: /tidak ditemukan/ },
+    { program: { faculty_id: 'fip', is_active: 0 }, message: /tidak aktif/ },
+    { program: { faculty_id: 'fip', is_active: false }, message: /tidak aktif/ },
+    { program: { faculty_id: 'fip' }, message: /tidak aktif/ },
+    { program: { faculty_id: 'ft', is_active: 1 }, message: /tidak sesuai.*fakultas/ },
+  ])('rejects $program without inserting', async ({ program, message }) => {
+    mockProgramGet.mockReturnValue(program)
+    const { createApplicant, submitRegistration } = await import('@/server/actions/applicants')
+    const result = source === 'admin' ? await createApplicant(VALID_APPLICANT) : await submitRegistration(registrationForm())
+    expect(result.error).toMatch(message)
+    expect(result.data).toBeUndefined()
+    expect(mockLocalInsert).not.toHaveBeenCalled()
+  })
+
+  it.each([true, 1])('accepts active flag %s', async is_active => {
+    mockProgramGet.mockReturnValue({ faculty_id: 'fip', is_active })
+    const { createApplicant, submitRegistration } = await import('@/server/actions/applicants')
+    const result = source === 'admin' ? await createApplicant(VALID_APPLICANT) : await submitRegistration(registrationForm())
+    expect(result.error).toBeUndefined()
+    expect(mockLocalInsert).toHaveBeenCalledOnce()
+  })
+})
 
 describe('createApplicant', () => {
   it('validates correct data successfully', async () => {
@@ -207,11 +235,12 @@ describe('submitRegistration', () => {
     expect(mockLocalInsert).not.toHaveBeenCalled()
   })
 
-  it.each(['open', 'rules', 'insert'])('controls unexpected %s errors and logs only safe metadata', async stage => {
+  it.each(['open', 'rules', 'catalog', 'insert'])('controls unexpected %s errors and logs only safe metadata', async stage => {
     const failure = Object.assign(new Error('private john@example.com 20123456 body'), { code: 'XX000', digest: 'safe-digest' })
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     if (stage === 'open') mockIsRegistrationOpen.mockRejectedValueOnce(failure)
     if (stage === 'rules') mockLocalQuery.mockImplementationOnce(() => { throw failure })
+    if (stage === 'catalog') mockProgramGet.mockImplementationOnce(() => { throw failure })
     if (stage === 'insert') mockLocalInsert.mockImplementationOnce(() => { throw failure })
     const { submitRegistration } = await import('@/server/actions/applicants')
     const result = await submitRegistration(registrationForm())

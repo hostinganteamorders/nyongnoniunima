@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
+import { randomUUID } from 'crypto'
+import { ACADEMIC_CATALOG } from '../academic-catalog'
 
 let db: Database.Database | null = null
 
@@ -76,7 +78,15 @@ export function getLocalDb(): Database.Database {
       db = new BetterSqlite3(dbPath, { readonly: true }) as Database.Database
     }
     db.pragma('foreign_keys = ON')
-    if (!readonly) initSchema(db)
+    if (!readonly) {
+      try {
+        initSchema(db)
+      } catch (error) {
+        db.close()
+        db = null
+        throw error
+      }
+    }
   }
   return db
 }
@@ -220,6 +230,7 @@ function initSchema(database: Database.Database) {
       faculty_id TEXT NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       code TEXT NOT NULL UNIQUE,
+      is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -244,53 +255,6 @@ function initSchema(database: Database.Database) {
 
     ${CURRENT_TITLEHOLDERS_TABLE_SQL}
 
-    -- Seed faculties if empty (nama & kode resmi UNIMA — web.unima.ac.id/fakultas)
-    INSERT OR IGNORE INTO faculties (id, name, code) VALUES
-      ('fip', 'Fakultas Ilmu Pendidikan dan Psikologi', 'FIPP'),
-      ('fbs', 'Fakultas Bahasa dan Seni', 'FBS'),
-      ('fish', 'Fakultas Ilmu Sosial dan Hukum', 'FISH'),
-      ('fmipa', 'Fakultas MIPA dan Kebumian', 'FMIPAK'),
-      ('ft', 'Fakultas Teknik', 'FT'),
-      ('fe', 'Fakultas Ekonomi dan Bisnis', 'FEB'),
-      ('fok', 'Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'FIKKM'),
-      ('fk', 'Fakultas Kedokteran', 'FK');
-
-    -- Seed study programs if empty
-    INSERT OR IGNORE INTO study_programs (id, faculty_id, name, code) VALUES
-      ('fip_pgsd', 'fip', 'PGSD', 'PGSD'),
-      ('fip_pgpaud', 'fip', 'PG PAUD', 'PGPAUD'),
-      ('fip_bk', 'fip', 'Bimbingan dan Konseling', 'BK'),
-      ('fip_plb', 'fip', 'Pendidikan Luar Biasa', 'PLB'),
-      ('fbs_pbi', 'fbs', 'Pendidikan Bahasa Inggris', 'PBI'),
-      ('fbs_pbind', 'fbs', 'Pendidikan Bahasa Indonesia', 'PBInd'),
-      ('fbs_sendratasik', 'fbs', 'Pendidikan Seni Drama, Tari dan Musik', 'Sendratasik'),
-      ('fish_ih', 'fish', 'Ilmu Hukum', 'IH'),
-      ('fish_is', 'fish', 'Ilmu Sosial', 'IS'),
-      ('fish_ps', 'fish', 'Pendidikan Sejarah', 'PS'),
-      ('fish_pg', 'fish', 'Pendidikan Geografi', 'PG'),
-      ('fish_ppkn', 'fish', 'Pendidikan Pancasila dan Kewarganegaraan', 'PPKN'),
-      ('fmipa_pmat', 'fmipa', 'Pendidikan Matematika', 'PMat'),
-      ('fmipa_pipa', 'fmipa', 'Pendidikan IPA', 'PIPA'),
-      ('fmipa_pbio', 'fmipa', 'Pendidikan Biologi', 'PBio'),
-      ('fmipa_pfis', 'fmipa', 'Pendidikan Fisika', 'PFis'),
-      ('fmipa_pkim', 'fmipa', 'Pendidikan Kimia', 'PKim'),
-      ('fmipa_bio', 'fmipa', 'Biologi', 'Bio'),
-      ('fmipa_fis', 'fmipa', 'Fisika', 'Fis'),
-      ('fmipa_kim', 'fmipa', 'Kimia', 'Kim'),
-      ('ft_ptm', 'ft', 'Pendidikan Teknik Mesin', 'PTM'),
-      ('ft_pte', 'ft', 'Pendidikan Teknik Elektro', 'PTE'),
-      ('ft_ptb', 'ft', 'Pendidikan Teknik Bangunan', 'PTB'),
-      ('ft_ti', 'ft', 'Teknik Informatika', 'TI'),
-      ('ft_ptik', 'ft', 'Pendidikan Teknologi Informasi dan Komunikasi', 'PTIK'),
-      ('fe_pe', 'fe', 'Pendidikan Ekonomi', 'PE'),
-      ('fe_man', 'fe', 'Manajemen', 'Man'),
-      ('fe_akun', 'fe', 'Akuntansi', 'Akun'),
-      ('fok_pjkr', 'fok', 'Pendidikan Jasmani, Kesehatan dan Rekreasi', 'PJKR'),
-      ('fok_pko', 'fok', 'Pendidikan Kepelatihan Olahraga', 'PKO'),
-      ('fok_ik', 'fok', 'Ilmu Keolahragaan', 'IK'),
-      ('fk_ppd', 'fk', 'Pendidikan Profesi Dokter', 'PPD'),
-      ('fk_ked', 'fk', 'Kedokteran', 'Ked');
-
     -- Seed default settings
     INSERT OR IGNORE INTO settings (id, key, value) VALUES
       ('s_site_name', 'site_name', '"Nyong Noni UNIMA Official Portal"'),
@@ -305,7 +269,67 @@ function initSchema(database: Database.Database) {
   `)
 
   migrateStaleCategoryChecks(database)
+  migrateAcademicCatalog(database)
   migrateSelection(database)
+}
+
+function migrateAcademicCatalog(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec('CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY)')
+    const version = '00011_academic_catalog'
+    if (database.prepare('SELECT 1 FROM schema_migrations WHERE version = ?').get(version)) return
+
+    const columns = database.prepare('PRAGMA table_info(study_programs)').all() as { name: string }[]
+    if (!columns.some(c => c.name === 'is_active')) {
+      database.exec('ALTER TABLE study_programs ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1')
+    }
+    for (const faculty of ACADEMIC_CATALOG) {
+      const matches = database.prepare('SELECT id, code FROM faculties WHERE code IN (?, ?)')
+        .all(faculty.code, faculty.legacyCode ?? faculty.code) as { id: string; code: string }[]
+      if (matches.length > 1) throw new Error(`Ambiguous faculty codes: ${faculty.code}`)
+      const existing = matches[0]
+      const facultyId = existing?.id ?? faculty.id
+      if (!existing) {
+        database.prepare('INSERT INTO faculties (id, name, code) VALUES (?, ?, ?)')
+          .run(facultyId, faculty.name, faculty.code)
+      } else if (existing.code !== faculty.code || ['FIKKM', 'FMIPAK'].includes(faculty.code)) {
+        database.prepare('UPDATE faculties SET name = ?, code = ? WHERE id = ?')
+          .run(faculty.name, faculty.code, facultyId)
+      }
+      for (const [code, name, active] of faculty.programs) {
+        const program = database.prepare('SELECT faculty_id FROM study_programs WHERE code = ?')
+          .get(code) as { faculty_id: string } | undefined
+        if (program && program.faculty_id !== facultyId) {
+          throw new Error(`Study program code ${code} belongs to another faculty`)
+        }
+        if (program) {
+          database.prepare('UPDATE study_programs SET name = ?, is_active = ? WHERE code = ?')
+            .run(name, active === false ? 0 : 1, code)
+        } else {
+          const preferredId = `${faculty.id}_${code.toLowerCase()}`
+          const programId = database.prepare('SELECT 1 FROM study_programs WHERE id = ?').get(preferredId)
+            ? randomUUID() : preferredId
+          database.prepare('INSERT INTO study_programs (id, faculty_id, name, code, is_active) VALUES (?, ?, ?, ?, ?)')
+            .run(programId, facultyId, name, code, active === false ? 0 : 1)
+        }
+      }
+    }
+
+    // These fields can contain arbitrary TEXT IDs, even IDs identical to labels.
+    for (const table of ['applicants', 'titleholders', 'current_titleholders']) {
+      const fields = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+      if (!fields.some(c => c.name === 'faculty')) continue
+      database.prepare(`UPDATE ${table} AS t SET faculty = ? WHERE trim(t.faculty) IN (?, ?, ?, ?)
+        AND NOT EXISTS (SELECT 1 FROM faculties f WHERE f.id = t.faculty)`)
+        .run('Fakultas Ilmu Keolahragaan dan Kesehatan', 'FIKKM', 'FOK',
+          'Fakultas Ilmu Keolahragaan dan Kesehatan Masyarakat', 'Fakultas Olahraga dan Kesehatan')
+      database.prepare(`UPDATE ${table} AS t SET faculty = ? WHERE trim(t.faculty) IN (?, ?, ?, ?)
+        AND NOT EXISTS (SELECT 1 FROM faculties f WHERE f.id = t.faculty)`)
+        .run('Fakultas Matematika, Ilmu Pengetahuan Alam dan Kebumian', 'FMIPAK', 'FMIPA',
+          'Fakultas MIPA dan Kebumian', 'Fakultas Matematika dan Ilmu Pengetahuan Alam')
+    }
+    database.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(version)
+  })()
 }
 
 function migrateSelection(database: Database.Database): void {

@@ -311,6 +311,55 @@ describe('idempotent local public registration', () => {
     db.prepare("UPDATE settings SET value = 'true' WHERE key = 'registration_open'").run()
   })
 
+  it('keeps historical catalog entries readable but only offers active programs for registration', async () => {
+    const { getFaculties, getStudyPrograms } = await import('@/server/actions/unima')
+    const all: { id: string; faculty_id: string; is_active: number }[] = await getStudyPrograms()
+    const active: typeof all = await getStudyPrograms(undefined, true)
+    const archived = all.filter(program => program.is_active === 0)
+    expect(archived.length).toBeGreaterThan(0)
+    expect(active.length).toBeGreaterThan(0)
+    expect(active.every(program => program.is_active === 1)).toBe(true)
+    expect(active).toEqual(all.filter(program => program.is_active === 1))
+    expect((await getStudyPrograms(archived[0].faculty_id)).map((program: { id: string }) => program.id)).toContain(archived[0].id)
+    expect((await getStudyPrograms(archived[0].faculty_id, true)).map((program: { id: string }) => program.id)).not.toContain(archived[0].id)
+    expect(await getFaculties()).toHaveLength(8)
+  })
+
+  describe.each(['public', 'admin'])('%s catalog validation with real persistence', source => {
+    it.each(['unknown', 'free-text', 'inactive', 'mismatch'])('rejects %s programs without inserting', async invalid => {
+      const form = registrationForm()
+      if (invalid === 'unknown') form.set('study_program', 'nonexistent-program')
+      if (invalid === 'free-text') form.set('study_program', 'Teknik Informatika')
+      if (invalid === 'inactive') {
+        const archived = db.prepare('SELECT id, faculty_id FROM study_programs WHERE is_active = 0 LIMIT 1').get() as { id: string; faculty_id: string }
+        expect(archived).toBeDefined()
+        form.set('study_program', archived.id)
+        form.set('faculty', archived.faculty_id)
+      }
+      if (invalid === 'mismatch') form.set('faculty', 'fip')
+      const result = source === 'admin'
+        ? await applicants.createApplicant({ ...Object.fromEntries(form.entries()), consent: true } as never)
+        : await applicants.submitRegistration(form)
+      expect(result.data).toBeUndefined()
+      expect(result.error).toMatch(invalid === 'inactive' ? /tidak aktif/ : invalid === 'mismatch' ? /tidak sesuai.*fakultas/ : /tidak ditemukan/)
+      expect(db.prepare('SELECT count(*) AS n FROM applicants').get()).toEqual({ n: 0 })
+    })
+  })
+
+  it('allows an exact replay after its program is archived but rejects changed bodies and fresh IDs', async () => {
+    const form = registrationForm()
+    const expected = { data: { id: form.get('submission_id') } }
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    const original = db.prepare('SELECT * FROM applicants').all()
+    db.prepare('UPDATE study_programs SET is_active = 0 WHERE id = ?').run(form.get('study_program'))
+    expect(await applicants.submitRegistration(form)).toEqual(expected)
+    form.set('essay', `${VALID_REGISTRATION.essay} Changed content.`)
+    expect((await applicants.submitRegistration(form)).error).toMatch(/ID pengiriman sudah digunakan/)
+    form.set('submission_id', crypto.randomUUID())
+    expect((await applicants.submitRegistration(form)).error).toMatch(/tidak aktif/)
+    expect(db.prepare('SELECT * FROM applicants').all()).toEqual(original)
+  })
+
   it('returns only the same ID for sequential and concurrent retries and stores one row', async () => {
     const form = registrationForm()
     const expected = { data: { id: form.get('submission_id') } }
