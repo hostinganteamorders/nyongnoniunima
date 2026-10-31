@@ -60,6 +60,94 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks())
 
+describe('remote manual semifinalist creation', () => {
+  const validInput = { full_name: 'John Doe', phone: '081234567890', faculty: 'ft', gender: 'Laki-laki', selection_year: 2026 }
+
+  it.each([validInput, {}])('requires admin before validation or accessing either client for %j', async input => {
+    const { createManualSemifinalist } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    const error = new Error('Unauthorized')
+    mocks.requireAdmin.mockRejectedValueOnce(error)
+
+    await expect(createManualSemifinalist(input as never)).rejects.toBe(error)
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { full_name: undefined },
+    { full_name: null },
+    { full_name: '  ab  ' },
+    { full_name: 'a'.repeat(201) },
+    { phone: undefined },
+    { phone: null },
+    { phone: '' },
+    { phone: 'not a phone' },
+    { phone: '+12025550123' },
+    { phone: '0'.repeat(31) },
+    { faculty: undefined },
+    { faculty: null },
+    { faculty: '' },
+    { gender: undefined },
+    { gender: null },
+    { gender: 'Other' },
+    { selection_year: undefined },
+    { selection_year: null },
+    { selection_year: '2026' },
+    { selection_year: 2026.5 },
+    { selection_year: 1999 },
+    { selection_year: 2101 },
+    { status: 'finalist' },
+    { study_program: 'ft_ti' },
+    { unexpected: true },
+  ])('rejects invalid or extra fields before client access: %j', async overrides => {
+    const { createManualSemifinalist } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+
+    await expect(createManualSemifinalist({ ...validInput, ...overrides } as never)).rejects.toMatchObject({ name: 'ZodError' })
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each(['Laki-laki', 'Perempuan'])('creates %s through exactly one RPC with only validated fields and no direct table writes', async gender => {
+    const { createManualSemifinalist } = await import('@/server/actions/selection')
+
+    await expect(createManualSemifinalist({ ...validInput, full_name: '  John Doe  ', phone: '  081234567890  ', gender })).resolves.toBeUndefined()
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).toHaveBeenCalledOnce()
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('create_manual_semifinalist', {
+      p_full_name: 'John Doe', p_phone: '081234567890', p_faculty: 'ft', p_gender: gender, p_year: 2026,
+    })
+    expect(mocks.requireAdmin.mock.invocationCallOrder[0]).toBeLessThan(mocks.getAdminClient.mock.invocationCallOrder[0])
+    expect(mocks.getAdminClient.mock.invocationCallOrder[0]).toBeLessThan(mocks.rpc.mock.invocationCallOrder[0])
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+  })
+
+  it('propagates an RPC error without falling back to table writes or invalidating caches', async () => {
+    const { createManualSemifinalist } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    mocks.rpc.mockResolvedValueOnce({ error: { message: 'Manual semifinalist transaction failed' } })
+
+    await expect(createManualSemifinalist(validInput)).rejects.toThrow('Manual semifinalist transaction failed')
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('create_manual_semifinalist', {
+      p_full_name: 'John Doe', p_phone: '081234567890', p_faculty: 'ft', p_gender: 'Laki-laki', p_year: 2026,
+    })
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
 describe('remote finalist write errors', () => {
   it('saves applicant and profile through one locked transaction RPC', async () => {
     const { updateFinalistData } = await import('@/server/actions/finalists')

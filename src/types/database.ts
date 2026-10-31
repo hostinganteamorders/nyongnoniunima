@@ -38,22 +38,22 @@ export interface Database {
           id: string
           user_id: string | null
           full_name: string
-          email: string
+          email: string | null
           phone: string
-          date_of_birth: string
+          date_of_birth: string | null
           place_of_birth: string | null
           gender: string | null
           nim: string | null
           faculty: string | null
           study_program: string | null
           semester: number | null
-          address: string
-          city: string
-          province: string
-          height_cm: number
-          weight_kg: number
-          occupation: string
-          education: string
+          address: string | null
+          city: string | null
+          province: string | null
+          height_cm: number | null
+          weight_kg: number | null
+          occupation: string | null
+          education: string | null
           instagram: string | null
           tiktok: string | null
           facebook: string | null
@@ -75,22 +75,22 @@ export interface Database {
           id?: string
           user_id?: string | null
           full_name: string
-          email: string
+          email?: string | null
           phone: string
-          date_of_birth: string
+          date_of_birth?: string | null
           place_of_birth?: string | null
           gender?: string | null
           nim?: string | null
           faculty?: string | null
           study_program?: string | null
           semester?: number | null
-          address: string
-          city: string
-          province: string
-          height_cm?: number
-          weight_kg?: number
-          occupation?: string
-          education?: string
+          address?: string | null
+          city?: string | null
+          province?: string | null
+          height_cm?: number | null
+          weight_kg?: number | null
+          occupation?: string | null
+          education?: string | null
           instagram?: string | null
           tiktok?: string | null
           facebook?: string | null
@@ -112,22 +112,22 @@ export interface Database {
           id?: string
           user_id?: string | null
           full_name?: string
-          email?: string
+          email?: string | null
           phone?: string
-          date_of_birth?: string
+          date_of_birth?: string | null
           place_of_birth?: string | null
           gender?: string | null
           nim?: string | null
           faculty?: string | null
           study_program?: string | null
           semester?: number | null
-          address?: string
-          city?: string
-          province?: string
-          height_cm?: number
-          weight_kg?: number
-          occupation?: string
-          education?: string
+          address?: string | null
+          city?: string | null
+          province?: string | null
+          height_cm?: number | null
+          weight_kg?: number | null
+          occupation?: string | null
+          education?: string | null
           instagram?: string | null
           tiktok?: string | null
           facebook?: string | null

@@ -9,19 +9,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   buildSemifinalistWhatsAppUrl,
+  isValidWhatsAppGroupUrl,
   type SelectionAdminData,
   type SelectionApplicant,
   type SelectionStage,
 } from '@/lib/selection'
 import {
+  createManualSemifinalist,
   getSelectionAdminData,
   publishFinalists,
   saveFacultyWhatsAppGroup,
   saveSelectionAnnouncement,
   setRegistrationYear,
+  setSelectionStudyProgram,
   updateSelectionStage,
 } from '@/server/actions/selection'
 import { saveAuditionDate } from '@/server/actions/registration-rules'
+import { getStudyPrograms } from '@/server/actions/unima'
 
 const STAGE_LABELS: Record<SelectionStage, string> = {
   semifinalist: 'Semifinalis',
@@ -59,8 +63,13 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
   const [groupInputs, setGroupInputs] = useState<Record<string, string>>(
     Object.fromEntries(initialData.groups.map((group) => [group.faculty_id, group.invite_url])),
   )
+  const [groupNotices, setGroupNotices] = useState<Record<string, { error: boolean; message: string }>>({})
+  const [savingGroupId, setSavingGroupId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ error: boolean; message: string } | null>(null)
   const [invitationId, setInvitationId] = useState<string | null>(null)
+  const [programApplicant, setProgramApplicant] = useState<SelectionApplicant | null>(null)
+  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([])
+  const [selectedProgramId, setSelectedProgramId] = useState('')
   const [confirmation, setConfirmation] = useState<{
     title: string; description: string; label: string; action: () => Promise<void>
   } | null>(null)
@@ -112,6 +121,7 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
         setTitle(next.announcement?.title || '')
         setBody(next.announcement?.body || '')
         setGroupInputs(Object.fromEntries(next.groups.map((group) => [group.faculty_id, group.invite_url])))
+        setGroupNotices({})
         setFacultyFilter('all')
         setStageFilter('all')
         setGenderFilter('all')
@@ -123,7 +133,7 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
     })
   }
 
-  function mutate(action: () => Promise<void>, message: string, syncAnnouncement = false) {
+  function mutate(action: () => Promise<void>, message: string, syncAnnouncement = false, onSuccess?: () => void) {
     setNotice(null)
     startTransition(async () => {
       try {
@@ -135,10 +145,38 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
           setTitle(next.announcement?.title || '')
           setBody(next.announcement?.body || '')
         }
+        onSuccess?.()
         setNotice({ error: false, message })
         setConfirmation(null)
       } catch (error) {
         setNotice({ error: true, message: error instanceof Error ? error.message : 'Perubahan gagal disimpan. Muat ulang data sebelum mencoba lagi.' })
+      }
+    })
+  }
+
+  function saveGroup(facultyId: string) {
+    if (isPending) return
+    const url = (groupInputs[facultyId] || '').trim()
+    if (url && !isValidWhatsAppGroupUrl(url)) {
+      setGroupNotices(current => ({ ...current, [facultyId]: { error: true, message: 'Gunakan link undangan grup https://chat.whatsapp.com/... yang valid.' } }))
+      return
+    }
+    setSavingGroupId(facultyId)
+    setGroupNotices(current => ({ ...current, [facultyId]: { error: false, message: 'Menyimpan link grup...' } }))
+    startTransition(async () => {
+      try {
+        await saveFacultyWhatsAppGroup(data.year, facultyId, url)
+        const next = await getSelectionAdminData(data.year)
+        const savedUrl = next.groups.find(group => group.faculty_id === facultyId)?.invite_url || ''
+        if (savedUrl !== url) throw new Error('Link belum terkonfirmasi tersimpan. Input tetap dipertahankan; coba simpan kembali.')
+        setData(next)
+        // Only synchronize this faculty; other rows may contain unsaved edits.
+        setGroupInputs(current => ({ ...current, [facultyId]: savedUrl }))
+        setGroupNotices(current => ({ ...current, [facultyId]: { error: false, message: savedUrl ? 'Link grup berhasil disimpan.' : 'Link grup berhasil dihapus.' } }))
+      } catch (error) {
+        setGroupNotices(current => ({ ...current, [facultyId]: { error: true, message: error instanceof Error ? error.message : 'Gagal menyimpan link grup. Input tetap dipertahankan; silakan coba lagi.' } }))
+      } finally {
+        setSavingGroupId(null)
       }
     })
   }
@@ -150,6 +188,22 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
       description: `${applicant.full_name} | ${facultyName(applicant.faculty)} | Seleksi ${data.year}. Perubahan tahap akan disimpan. Tidak ada pesan WhatsApp yang dikirim otomatis.`,
       label: 'Konfirmasi dan Simpan',
       action: () => updateSelectionStage(applicant.id, stage),
+    })
+  }
+
+  function openStudyProgram(applicant: SelectionApplicant) {
+    setNotice(null)
+    setProgramApplicant(applicant)
+    setPrograms([])
+    setSelectedProgramId('')
+    startTransition(async () => {
+      try {
+        const id = facultyId(applicant.faculty)
+        if (!id) throw new Error('Fakultas tidak ditemukan')
+        setPrograms(await getStudyPrograms(id, true))
+      } catch (error) {
+        setNotice({ error: true, message: error instanceof Error ? error.message : 'Gagal memuat program studi.' })
+      }
     })
   }
 
@@ -241,6 +295,42 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
         </CardContent>
       </Card>
 
+      {!published && <Card>
+        <CardContent className="pt-6">
+          <details key={data.year}>
+            <summary className="cursor-pointer rounded-lg font-semibold text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue/30">
+              Tambah Semifinalis <span className="text-sm font-normal text-muted">| Seleksi {data.year}</span>
+            </summary>
+            <form className="mt-4 space-y-4" aria-label="Tambah semifinalis manual" aria-describedby="manual-semifinalist-help" onSubmit={(event) => {
+              event.preventDefault()
+              if (isPending || readOnly) return
+              const form = event.currentTarget
+              const values = new FormData(form)
+              const gender = values.get('gender')
+              if (gender !== 'Laki-laki' && gender !== 'Perempuan') return
+              const input = {
+                full_name: String(values.get('full_name') || '').trim(),
+                phone: String(values.get('phone') || '').trim(),
+                faculty: String(values.get('faculty') || ''),
+                gender,
+                selection_year: data.year,
+              }
+              mutate(() => createManualSemifinalist(input), `Semifinalis berhasil ditambahkan untuk seleksi ${input.selection_year}.`, false, () => form.reset())
+            }}>
+              <p id="manual-semifinalist-help" className="text-sm text-muted">Tambahkan peserta yang sudah lolos seleksi fakultas. Data pendaftaran yang belum diketahui tetap kosong, bukan diisi data contoh.</p>
+              <fieldset disabled={isPending || readOnly} className="grid min-w-0 gap-4 sm:grid-cols-2">
+                <div><Label htmlFor="manual-full-name">Nama lengkap</Label><Input id="manual-full-name" name="full_name" className="mt-1" autoComplete="name" required /></div>
+                <div><Label htmlFor="manual-phone">Nomor WhatsApp</Label><Input id="manual-phone" name="phone" type="tel" className="mt-1" autoComplete="tel" placeholder="08... atau +628..." required /></div>
+                <div><Label htmlFor="manual-faculty">Fakultas semifinalis</Label><select id="manual-faculty" name="faculty" className={`${selectClass} mt-1`} defaultValue="" required><option value="" disabled>Pilih fakultas</option>{data.faculties.map((faculty) => <option key={faculty.id} value={faculty.id}>{faculty.name}</option>)}</select></div>
+                <div><Label htmlFor="manual-gender">Kategori semifinalis</Label><select id="manual-gender" name="gender" className={`${selectClass} mt-1`} defaultValue="" required><option value="" disabled>Pilih kategori</option><option value="Laki-laki">Nyong (Laki-laki)</option><option value="Perempuan">Noni (Perempuan)</option></select></div>
+              </fieldset>
+              <p className="rounded-lg border border-accent/40 bg-accent/10 p-3 text-xs text-dark-text">Program studi yang sebenarnya wajib dilengkapi sebelum pengumuman finalis diterbitkan.</p>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isPending || readOnly}>Tambah Semifinalis</Button>
+            </form>
+          </details>
+        </CardContent>
+      </Card>}
+
       <Card>
         <CardHeader><CardTitle className="text-lg">Peserta Seleksi ({filtered.length})</CardTitle></CardHeader>
         <CardContent>
@@ -263,6 +353,7 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
                 </div>
                 <div className="flex flex-col gap-2 xl:max-w-sm xl:items-end">
                   {!readOnly && <div className="flex flex-wrap gap-2 xl:justify-end">
+                    {!applicant.study_program && applicant.status === 'verified' && ['semifinalist', 'finalist_draft'].includes(applicant.stage || '') && <Button size="sm" variant="outline" className={wrapButton} disabled={isPending} onClick={() => openStudyProgram(applicant)}>Lengkapi Program Studi</Button>}
                     {!applicant.stage && applicant.status === 'verified' && <Button size="sm" className={wrapButton} disabled={isPending} onClick={() => confirmStage(applicant, 'semifinalist', 'Tetapkan sebagai Semifinalis')}>Tetapkan sebagai Semifinalis</Button>}
                     {!applicant.stage && ['pending', 'verified'].includes(applicant.status) && <Button size="sm" variant="outline" className={wrapButton} disabled={isPending} onClick={() => confirmStage(applicant, 'not_selected_faculty', 'Tidak lolos fakultas')}>Tidak lolos fakultas</Button>}
                     {applicant.stage === 'semifinalist' && applicant.status === 'verified' && <>
@@ -289,15 +380,26 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
           <p className="text-sm text-muted">Tautan hanya tersedia untuk admin dan undangan pribadi. Kosongkan lalu simpan untuk menghapus tautan. Pengaturan grup tidak mengubah hasil seleksi yang diterbitkan.</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {data.faculties.map((faculty) => <form key={faculty.id} className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={(event) => {
+          {data.faculties.map((faculty) => <form key={faculty.id} className="space-y-2" noValidate onSubmit={(event) => {
             event.preventDefault()
-            mutate(() => saveFacultyWhatsAppGroup(data.year, faculty.id, (groupInputs[faculty.id] || '').trim()), `Pengaturan grup ${faculty.name} disimpan.`)
+            saveGroup(faculty.id)
           }}>
-            <div className="min-w-0 flex-1">
-              <Label htmlFor={`group-${faculty.id}`}>{faculty.name}</Label>
-              <Input id={`group-${faculty.id}`} className="mt-1" type="url" placeholder="https://chat.whatsapp.com/token" value={groupInputs[faculty.id] || ''} disabled={isPending} onChange={(event) => setGroupInputs({ ...groupInputs, [faculty.id]: event.target.value })} />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor={`group-${faculty.id}`}>{faculty.name}</Label>
+                <Input id={`group-${faculty.id}`} className="mt-1" type="url" placeholder="https://chat.whatsapp.com/token" value={groupInputs[faculty.id] || ''} disabled={isPending} aria-invalid={groupNotices[faculty.id]?.error || undefined} aria-describedby={groupNotices[faculty.id] ? `group-status-${faculty.id}` : undefined} onChange={(event) => {
+                  const value = event.target.value
+                  setGroupInputs(current => ({ ...current, [faculty.id]: value }))
+                  setGroupNotices(current => {
+                    const next = { ...current }
+                    delete next[faculty.id]
+                    return next
+                  })
+                }} />
+              </div>
+              <Button type="submit" variant="outline" disabled={isPending || (groupInputs[faculty.id] || '') === (data.groups.find((group) => group.faculty_id === faculty.id)?.invite_url || '')}>{savingGroupId === faculty.id ? 'Menyimpan...' : 'Simpan Grup'}</Button>
             </div>
-            <Button type="submit" variant="outline" disabled={isPending || (groupInputs[faculty.id] || '') === (data.groups.find((group) => group.faculty_id === faculty.id)?.invite_url || '')}>Simpan Grup</Button>
+            {groupNotices[faculty.id] && <p id={`group-status-${faculty.id}`} role={groupNotices[faculty.id].error ? 'alert' : 'status'} className={`text-sm ${groupNotices[faculty.id].error ? 'text-red-700' : 'text-green-700'}`}>{groupNotices[faculty.id].message}</p>}
           </form>)}
           {data.faculties.length === 0 && <p className="text-sm text-muted">Belum ada fakultas untuk pengaturan grup.</p>}
         </CardContent>
@@ -345,6 +447,30 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
           </div>}
         </CardContent>
       </Card>
+
+      <Dialog.Root open={Boolean(programApplicant)} onOpenChange={(open) => { if (!open && !isPending) setProgramApplicant(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-white p-6 shadow-xl">
+            <Dialog.Title className="text-lg font-bold text-dark-text">Lengkapi Program Studi</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-muted">Pilih program studi sebenarnya untuk {programApplicant?.full_name} sebelum publikasi finalis.</Dialog.Description>
+            <form className="mt-4 space-y-4" onSubmit={(event) => {
+              event.preventDefault()
+              if (isPending || !programApplicant || !selectedProgramId) return
+              mutate(() => setSelectionStudyProgram(programApplicant.id, selectedProgramId), 'Program studi berhasil disimpan.', false, () => setProgramApplicant(null))
+            }}>
+              <div><Label htmlFor="selection-study-program">Program studi</Label><select id="selection-study-program" className={`${selectClass} mt-1`} value={selectedProgramId} disabled={isPending} required onChange={(event) => setSelectedProgramId(event.target.value)}><option value="" disabled>Pilih program studi</option>{programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}</select></div>
+              {isPending && <p role="status" className="text-sm text-primary-blue">Memproses program studi...</p>}
+              {!isPending && programs.length === 0 && <p className="text-sm text-muted">Tidak ada program studi aktif yang tersedia.</p>}
+              {notice?.error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{notice.message}</p>}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Dialog.Close asChild><Button variant="outline" disabled={isPending}>Batal</Button></Dialog.Close>
+                <Button type="submit" disabled={isPending || !selectedProgramId}>{isPending ? 'Memproses...' : 'Simpan Program Studi'}</Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <Dialog.Root open={Boolean(confirmation)} onOpenChange={(open) => { if (!open && !isPending) setConfirmation(null) }}>
         <Dialog.Portal>

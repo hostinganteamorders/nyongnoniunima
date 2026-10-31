@@ -6,14 +6,17 @@ import { SelectionClient } from '@/app/admin/selection/selection-client'
 import AdminSelectionPage from '@/app/admin/selection/page'
 import { getRegistrationRules, saveAuditionDate } from '@/server/actions/registration-rules'
 import {
-  getSelectionAdminData, publishFinalists, saveFacultyWhatsAppGroup,
-  saveSelectionAnnouncement, setRegistrationYear, updateSelectionStage,
+  createManualSemifinalist, getSelectionAdminData, publishFinalists, saveFacultyWhatsAppGroup,
+  saveSelectionAnnouncement, setRegistrationYear, setSelectionStudyProgram, updateSelectionStage,
 } from '@/server/actions/selection'
+import { getStudyPrograms } from '@/server/actions/unima'
 
 vi.mock('@/server/actions/selection', () => ({
+  createManualSemifinalist: vi.fn(),
   getSelectionAdminData: vi.fn(), publishFinalists: vi.fn(), saveFacultyWhatsAppGroup: vi.fn(),
-  saveSelectionAnnouncement: vi.fn(), setRegistrationYear: vi.fn(), updateSelectionStage: vi.fn(),
+  saveSelectionAnnouncement: vi.fn(), setRegistrationYear: vi.fn(), setSelectionStudyProgram: vi.fn(), updateSelectionStage: vi.fn(),
 }))
+vi.mock('@/server/actions/unima', () => ({ getStudyPrograms: vi.fn() }))
 vi.mock('@/server/actions/registration-rules', () => ({
   getRegistrationRules: vi.fn(), saveAuditionDate: vi.fn(),
 }))
@@ -44,6 +47,112 @@ describe('Selection admin', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(getSelectionAdminData).mockResolvedValue(data())
+  })
+
+  it('requires manual semifinalist fields, preserves failed input, and resets only after successful reload', async () => {
+    const user = userEvent.setup()
+    vi.mocked(createManualSemifinalist).mockRejectedValueOnce(new Error('Nomor WhatsApp tidak valid')).mockResolvedValue(undefined)
+    render(<SelectionClient initialData={data()} />)
+    await user.click(screen.getByText('Tambah Semifinalis', { selector: 'summary' }))
+    const form = within(screen.getByRole('form', { name: 'Tambah semifinalis manual' }))
+    await user.click(form.getByRole('button', { name: 'Tambah Semifinalis' }))
+    expect(createManualSemifinalist).not.toHaveBeenCalled()
+    await user.type(form.getByLabelText('Nama lengkap'), '  Noni Manual  ')
+    await user.type(form.getByLabelText('Nomor WhatsApp'), '081234567890')
+    await user.selectOptions(form.getByLabelText('Fakultas semifinalis'), 'f2')
+    await user.selectOptions(form.getByLabelText('Kategori semifinalis'), 'Perempuan')
+    await user.click(form.getByRole('button', { name: 'Tambah Semifinalis' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nomor WhatsApp tidak valid')
+    expect(form.getByLabelText('Nama lengkap')).toHaveValue('  Noni Manual  ')
+    expect(getSelectionAdminData).not.toHaveBeenCalled()
+    vi.mocked(getSelectionAdminData).mockRejectedValueOnce(new Error('Gagal memuat ulang'))
+    await user.click(form.getByRole('button', { name: 'Tambah Semifinalis' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Gagal memuat ulang')
+    expect(form.getByLabelText('Nama lengkap')).toHaveValue('  Noni Manual  ')
+    await user.click(form.getByRole('button', { name: 'Tambah Semifinalis' }))
+    await waitFor(() => expect(form.getByLabelText('Nama lengkap')).toHaveValue(''))
+    expect(createManualSemifinalist).toHaveBeenLastCalledWith({
+      full_name: 'Noni Manual', phone: '081234567890', faculty: 'f2', gender: 'Perempuan', selection_year: 2026,
+    })
+    expect(getSelectionAdminData).toHaveBeenLastCalledWith(2026)
+    expect(form.getByLabelText('Nomor WhatsApp')).toHaveValue('')
+    expect(form.getByLabelText('Fakultas semifinalis')).toHaveValue('')
+    expect(form.getByLabelText('Kategori semifinalis')).toHaveValue('')
+  })
+
+  it('clears the manual form on year changes and submits the displayed selection year', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ year: 2025, applicants: [] }))
+    render(<SelectionClient initialData={data()} />)
+    await user.click(screen.getByText('Tambah Semifinalis', { selector: 'summary' }))
+    await user.type(screen.getByLabelText('Nama lengkap'), 'Belum disimpan')
+    await user.selectOptions(screen.getByLabelText('Tahun seleksi'), '2025')
+    await waitFor(() => expect(screen.getByText('Tambah Semifinalis', { selector: 'summary' })).toHaveTextContent('Seleksi 2025'))
+    await user.click(screen.getByText('Tambah Semifinalis', { selector: 'summary' }))
+    const form = within(screen.getByRole('form', { name: 'Tambah semifinalis manual' }))
+    expect(form.getByLabelText('Nama lengkap')).toHaveValue('')
+    await user.type(form.getByLabelText('Nama lengkap'), 'Nyong Manual')
+    await user.type(form.getByLabelText('Nomor WhatsApp'), '081234567890')
+    await user.selectOptions(form.getByLabelText('Fakultas semifinalis'), 'f1')
+    await user.selectOptions(form.getByLabelText('Kategori semifinalis'), 'Laki-laki')
+    await user.click(form.getByRole('button', { name: 'Tambah Semifinalis' }))
+    await waitFor(() => expect(createManualSemifinalist).toHaveBeenCalledWith({
+      full_name: 'Nyong Manual', phone: '081234567890', faculty: 'f1', gender: 'Laki-laki', selection_year: 2025,
+    }))
+    expect(getSelectionAdminData).toHaveBeenLastCalledWith(2025)
+  })
+
+  it.each(['semifinalist', 'finalist_draft'] as const)('loads the faculty catalog on opening and completes a %s only after save and reload', async stage => {
+    const user = userEvent.setup()
+    const missing = applicant({ study_program: null, stage, semifinalist_at: '2026-10-01' })
+    vi.mocked(getStudyPrograms).mockResolvedValue([{ id: 'p1', name: 'Pendidikan Bahasa' }])
+    vi.mocked(setSelectionStudyProgram).mockRejectedValueOnce(new Error('Program studi tidak aktif')).mockResolvedValue(undefined)
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ applicants: [{ ...missing, study_program: 'Pendidikan Bahasa' }] }))
+    render(<SelectionClient initialData={data({ applicants: [missing] })} />)
+    expect(getStudyPrograms).not.toHaveBeenCalled()
+    await user.click(row().getByRole('button', { name: 'Lengkapi Program Studi' }))
+    const dialog = within(screen.getByRole('dialog'))
+    expect(getStudyPrograms).toHaveBeenCalledWith('f1', true)
+    expect(await dialog.findByRole('button', { name: 'Simpan Program Studi' })).toBeDisabled()
+    await user.selectOptions(dialog.getByLabelText('Program studi'), 'p1')
+    await user.click(dialog.getByRole('button', { name: 'Simpan Program Studi' }))
+    expect(await dialog.findByRole('alert')).toHaveTextContent('Program studi tidak aktif')
+    expect(dialog.getByLabelText('Program studi')).toHaveValue('p1')
+    expect(getSelectionAdminData).not.toHaveBeenCalled()
+    vi.mocked(getSelectionAdminData).mockRejectedValueOnce(new Error('Gagal memuat ulang'))
+    await user.click(await dialog.findByRole('button', { name: 'Simpan Program Studi' }))
+    expect(await dialog.findByRole('alert')).toHaveTextContent('Gagal memuat ulang')
+    expect(dialog.getByLabelText('Program studi')).toHaveValue('p1')
+    await user.click(await dialog.findByRole('button', { name: 'Simpan Program Studi' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(setSelectionStudyProgram).toHaveBeenLastCalledWith('a1', 'p1')
+    expect(getSelectionAdminData).toHaveBeenLastCalledWith(2026)
+    expect(row().queryByRole('button', { name: 'Lengkapi Program Studi' })).not.toBeInTheDocument()
+  })
+
+  it('shows catalog loading failures in the program dialog without allowing save', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getStudyPrograms).mockRejectedValue(new Error('Gagal memuat katalog'))
+    render(<SelectionClient initialData={data({ applicants: [applicant({ study_program: null, stage: 'semifinalist', semifinalist_at: '2026-10-01' })] })} />)
+    await user.click(row().getByRole('button', { name: 'Lengkapi Program Studi' }))
+    const dialog = within(screen.getByRole('dialog'))
+    expect(await dialog.findByRole('alert')).toHaveTextContent('Gagal memuat katalog')
+    expect(await dialog.findByRole('button', { name: 'Simpan Program Studi' })).toBeDisabled()
+    expect(setSelectionStudyProgram).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { stage: null }, { stage: 'finalist' }, { stage: 'not_selected_university' },
+    { stage: 'semifinalist', status: 'pending' }, { stage: 'semifinalist', study_program: 'Existing' },
+  ] satisfies Partial<SelectionApplicant>[])('does not offer program enrichment for %j', overrides => {
+    render(<SelectionClient initialData={data({ applicants: [applicant({ study_program: null, ...overrides })] })} />)
+    expect(row().queryByRole('button', { name: 'Lengkapi Program Studi' })).not.toBeInTheDocument()
+  })
+
+  it('does not offer program enrichment after year publication', () => {
+    const initial = data({ applicants: [applicant({ study_program: null, stage: 'semifinalist' })] })
+    render(<SelectionClient initialData={{ ...initial, announcement: { ...initial.announcement!, published_at: '2026-10-25T00:00:00Z' } }} />)
+    expect(row().queryByRole('button', { name: 'Lengkapi Program Studi' })).not.toBeInTheDocument()
   })
 
   it('requires confirmation, saves stage, then offers a user-gesture WhatsApp link', async () => {
@@ -241,12 +350,119 @@ describe('Selection admin', () => {
 
   it('clears the faculty group only after explicit save', async () => {
     const user = userEvent.setup()
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [] }))
     render(<SelectionClient initialData={data()} />)
     const input = screen.getByLabelText('Fakultas Bahasa')
     await user.clear(input)
     expect(saveFacultyWhatsAppGroup).not.toHaveBeenCalled()
     await user.click(within(input.closest('form')!).getByRole('button', { name: 'Simpan Grup' }))
     await waitFor(() => expect(saveFacultyWhatsAppGroup).toHaveBeenCalledWith(2026, 'f1', ''))
+    await waitFor(() => expect(within(input.closest('form')!).getByRole('status')).toHaveTextContent('Link grup berhasil dihapus.'))
+    expect(input).toHaveValue('')
+  })
+
+  it('keeps a saved group visible, confirms it inline, and preserves other unsaved faculty links', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/NewToken?mode=gi_t'
+    const saved = data({ groups: [{ faculty_id: 'f1', invite_url: url }] })
+    vi.mocked(getSelectionAdminData).mockResolvedValue(saved)
+    const view = render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Bahasa')
+    const form = within(input.closest('form')!)
+    await user.type(screen.getByLabelText('Fakultas Teknik'), 'https://chat.whatsapp.com/Unsaved')
+    await user.clear(input)
+    await user.type(input, `  ${url}  `)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
+    expect(saveFacultyWhatsAppGroup).toHaveBeenCalledWith(2026, 'f1', url)
+    expect(input).toHaveValue(url)
+    expect(form.getByRole('button', { name: 'Simpan Grup' })).toBeDisabled()
+    expect(screen.getByLabelText('Fakultas Teknik')).toHaveValue('https://chat.whatsapp.com/Unsaved')
+    view.unmount()
+    render(<SelectionClient initialData={saved} />)
+    expect(screen.getByLabelText('Fakultas Bahasa')).toHaveValue(url)
+  })
+
+  it('shows save failures beside the input without clearing the link and permits retry', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/RetryToken'
+    vi.mocked(saveFacultyWhatsAppGroup).mockRejectedValueOnce(new Error('Sesi admin berakhir')).mockResolvedValue(undefined)
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [{ faculty_id: 'f2', invite_url: url }] }))
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, url)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('alert')).toHaveTextContent('Sesi admin berakhir')
+    expect(input).toHaveValue(url)
+    expect(getSelectionAdminData).not.toHaveBeenCalled()
+    await user.click(await form.findByRole('button', { name: 'Simpan Grup' }))
+    await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
+    expect(input).toHaveValue(url)
+    expect(form.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not report success or clear the input when the server reload is missing the saved link', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/MissingToken'
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, url)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('alert')).toHaveTextContent('Link belum terkonfirmasi tersimpan')
+    expect(input).toHaveValue(url)
+    expect(form.queryByText('Link grup berhasil disimpan.')).not.toBeInTheDocument()
+    await waitFor(() => expect(form.getByRole('button', { name: 'Simpan Grup' })).toBeEnabled())
+  })
+
+  it('keeps the entered link if reading saved data fails', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/NetworkToken'
+    vi.mocked(getSelectionAdminData).mockRejectedValue(new Error('Koneksi terputus'))
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, url)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('alert')).toHaveTextContent('Koneksi terputus')
+    expect(input).toHaveValue(url)
+  })
+
+  it('validates group links inline instead of silently relying on browser URL validation', async () => {
+    const user = userEvent.setup()
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, 'bukan link grup')
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('alert')).toHaveTextContent('Gunakan link undangan grup')
+    expect(input).toHaveValue('bukan link grup')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(saveFacultyWhatsAppGroup).not.toHaveBeenCalled()
+    await user.clear(input)
+    expect(form.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows progress beside the group and prevents repeat saves until persistence is confirmed', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/PendingToken'
+    let finishSave!: () => void
+    vi.mocked(saveFacultyWhatsAppGroup).mockImplementation(() => new Promise<void>(resolve => { finishSave = resolve }))
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [{ faculty_id: 'f2', invite_url: url }] }))
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, url)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('status')).toHaveTextContent('Menyimpan link grup...')
+    expect(input).toBeDisabled()
+    expect(form.getByRole('button', { name: 'Menyimpan...' })).toBeDisabled()
+    expect(getSelectionAdminData).not.toHaveBeenCalled()
+    finishSave()
+    await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
+    expect(saveFacultyWhatsAppGroup).toHaveBeenCalledTimes(1)
+    expect(input).toHaveValue(url)
   })
 
   it('saves announcement before publication, synchronizing backend-normalized text', async () => {
@@ -285,6 +501,7 @@ describe('Selection admin', () => {
     })
     expect(screen.getByText('Nama Snapshot')).toBeInTheDocument()
     expect(screen.queryByLabelText('Judul pengumuman')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tambah Semifinalis', { selector: 'summary' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Terbitkan Pengumuman Finalis' })).not.toBeInTheDocument()
     expect(row().queryByRole('button', { name: 'Reset Pilihan Draf' })).not.toBeInTheDocument()
   })

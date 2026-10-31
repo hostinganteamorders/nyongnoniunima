@@ -14,21 +14,21 @@ import Link from 'next/link'
 interface Applicant {
   id: string
   full_name: string
-  email: string
+  email: string | null
   phone: string
-  city: string
-  province: string
+  city: string | null
+  province: string | null
   status: string
   selection_stage?: string | null
   selection_year?: number
   selection_published?: boolean
   created_at: string
-  height_cm?: number
-  weight_kg?: number
-  occupation?: string
-  education?: string
-  date_of_birth?: string
-  address?: string
+  height_cm?: number | null
+  weight_kg?: number | null
+  occupation?: string | null
+  education?: string | null
+  date_of_birth?: string | null
+  address?: string | null
   place_of_birth?: string
   gender?: string
   nim?: string
@@ -68,7 +68,7 @@ function DetailRow({ label, value }: { label: string; value?: string | number | 
   return (
     <div className="flex justify-between gap-4 border-b border-border/50 py-2 last:border-0 last:pb-0">
       <span className="shrink-0 text-sm text-dark-secondary">{label}</span>
-      <span className="break-words text-right text-sm font-medium text-dark-text">{value || '-'}</span>
+      <span className="break-words text-right text-sm font-medium text-dark-text">{value === '' ? '-' : value ?? '-'}</span>
     </div>
   )
 }
@@ -138,8 +138,8 @@ export function ApplicantsClient({
   const filtered = applicants.filter(
     (a) =>
       a.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      a.email.toLowerCase().includes(search.toLowerCase()) ||
-      a.city.toLowerCase().includes(search.toLowerCase()),
+      (a.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (a.city ?? '').toLowerCase().includes(search.toLowerCase()),
   )
 
   const exportEmpty = (exportScope === 'search' ? filtered.length : applicants.length) === 0
@@ -342,7 +342,7 @@ export function ApplicantsClient({
                   {filtered.map((a) => (
                     <tr key={a.id} className="border-b border-border/50 hover:bg-gray-50/50">
                       <td className="py-3 font-medium">{a.full_name}</td>
-                      <td className="py-3 text-muted hidden md:table-cell">{a.email}</td>
+                      <td className="py-3 text-muted hidden md:table-cell">{a.email || '-'}</td>
                       <td className="py-3 text-muted hidden lg:table-cell">{facultyName(a.faculty)}{a.selection_year && <span className="block text-xs">{a.selection_year}</span>}</td>
                       <td className="py-3">
                         <div className="relative inline-block">

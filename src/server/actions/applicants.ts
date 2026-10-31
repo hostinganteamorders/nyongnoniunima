@@ -11,16 +11,16 @@ import { isRegistrationOpen } from '@/server/actions/unima'
 interface ApplicantRecord {
   id: string
   full_name: string
-  email: string
+  email: string | null
   phone: string
-  date_of_birth: string
-  address: string
-  city: string
-  province: string
-  height_cm: number
-  weight_kg: number
-  occupation: string
-  education: string
+  date_of_birth: string | null
+  address: string | null
+  city: string | null
+  province: string | null
+  height_cm: number | null
+  weight_kg: number | null
+  occupation: string | null
+  education: string | null
   photo_url: string | null
   instagram?: string | null
   status: string

@@ -15,16 +15,16 @@ import Link from 'next/link'
 interface Applicant {
   id: string
   full_name: string
-  email: string
+  email: string | null
   phone: string
-  date_of_birth: string
-  address: string
-  city: string
-  province: string
-  height_cm?: number
-  weight_kg?: number
-  occupation?: string
-  education?: string
+  date_of_birth: string | null
+  address: string | null
+  city: string | null
+  province: string | null
+  height_cm?: number | null
+  weight_kg?: number | null
+  occupation?: string | null
+  education?: string | null
   photo_url?: string | null
   status: string
   instagram?: string
@@ -92,10 +92,10 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
 
   const filteredFinalists = finalists.filter((a) =>
     a.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    a.city.toLowerCase().includes(search.toLowerCase()))
+    (a.city ?? '').toLowerCase().includes(search.toLowerCase()))
   const filteredCandidates = candidates.filter((a) =>
     a.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    a.city.toLowerCase().includes(search.toLowerCase()))
+    (a.city ?? '').toLowerCase().includes(search.toLowerCase()))
 
   const openEdit = (a: Applicant) => {
     sessionUploads.current.clear()
@@ -103,14 +103,14 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
     setEditData({
       applicant_id: a.id,
       full_name: a.full_name,
-      email: a.email,
+      email: a.email ?? '',
       phone: a.phone || '',
       date_of_birth: a.date_of_birth || '',
       address: a.address || '',
-      city: a.city,
-      province: a.province,
-      height_cm: String(a.height_cm || ''),
-      weight_kg: String(a.weight_kg || ''),
+      city: a.city ?? '',
+      province: a.province ?? '',
+      height_cm: String(a.height_cm ?? ''),
+      weight_kg: String(a.weight_kg ?? ''),
       occupation: a.occupation || '',
       education: a.education || '',
       instagram: a.instagram || '',
@@ -205,7 +205,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                         )}
                         <p className="font-medium truncate">{f.full_name}</p>
                       </div>
-                      <p className="text-xs text-muted">{f.city}, {f.province}</p>
+                      <p className="text-xs text-muted">{[f.city, f.province].filter(Boolean).join(', ') || '-'}</p>
                       {f.instagram && <p className="text-xs text-primary">{f.instagram}</p>}
                     </div>
                     <div className="flex gap-2 ml-2">
@@ -239,7 +239,7 @@ export function FinalistsClient({ applicants }: { applicants: Applicant[] }) {
                   <div key={c.id} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-gray-50">
                     <div>
                       <p className="font-medium text-sm">{c.full_name}</p>
-                      <p className="text-xs text-muted">{c.city} &middot; {c.height_cm} cm &middot; {c.occupation}</p>
+                      <p className="text-xs text-muted">{[c.city, c.height_cm != null ? `${c.height_cm} cm` : null, c.occupation].filter(Boolean).join(' \u00b7 ') || '-'}</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                       <FileText className="h-3 w-3 mr-1" /> Edit Profil

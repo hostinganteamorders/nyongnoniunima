@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { execFileSync, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -16,6 +16,12 @@ describe.skipIf(!enabled)('PostgreSQL publication and API boundary', () => {
   const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`
   const publish = (year: number, ids: number[], title = 'Title', body = 'Body') => rpc('publish', `, p_year => ${year}, p_expected_ids => ARRAY[${ids.map(n => `'${id(n)}'`).join(',')}]::uuid[], p_expected_title => '${title}', p_expected_body => '${body}'`)
   const save = (n: number, data: Record<string, unknown>) => rpc('finalist_data', `, p_applicant_id => '${id(n)}', p_data => '${JSON.stringify(data).replace(/'/g, "''")}'::jsonb`)
+  const manual = (n: number, fields: Record<string, string | number | null> = {}) => {
+    const data = { full_name: `Manual ${n}`, phone: `081320000${n}`, gender: 'Perempuan', year: 2041, ...fields }
+    const args = Object.entries(data).map(([key, value]) => `p_${key} => ${value === null ? 'NULL' : typeof value === 'number' ? value : `'${value.replace(/'/g, "''")}'`}`)
+    if (!('faculty' in fields)) args.push("p_faculty => (SELECT id FROM faculties WHERE code = 'FT')")
+    return `SELECT public.create_manual_semifinalist(${args.join(', ')});`
+  }
   function holdTransaction(statement: string) {
     const connection = spawn('psql', ['-X', '-h', root, '-p', port, '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-At'])
     let output = ''
@@ -49,11 +55,32 @@ describe.skipIf(!enabled)('PostgreSQL publication and API boundary', () => {
       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;`)
     sql(fs.readFileSync(path.join(project, 'supabase/setup.sql'), 'utf8'))
     sql(fs.readFileSync(path.join(project, 'supabase/migrations/00010_staged_selection.sql'), 'utf8'))
+    sql(fs.readFileSync(path.join(project, 'supabase/migrations/00012_manual_semifinalists.sql'), 'utf8'))
   }, 30000)
 
   afterAll(() => {
     if (started) execFileSync('pg_ctl', ['-D', path.join(root, 'db'), '-m', 'immediate', '-w', 'stop'], { stdio: 'pipe' })
     if (root) fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  it('generates a private, repeatable SQL import without interpreting names as SQL', () => {
+    const input = path.join(root, 'roster.private.json')
+    const output = path.join(root, 'roster.private.sql')
+    const fullName = "Manual O'Name $import$; --"
+    fs.writeFileSync(input, JSON.stringify([
+      { full_name: fullName, phone: ' 0813 2000-0951 ', faculty_code: 'FT', gender: 'Perempuan', selection_year: 2028 },
+      { full_name: 'Manual Import Nyong', phone: '081320000952', faculty_code: 'FEB', gender: 'Laki-laki', selection_year: 2028 },
+    ]))
+    execFileSync(process.execPath, [path.join(project, 'scripts/import-semifinalists.cjs'), input, '--sql-file', output], { stdio: 'pipe' })
+    const generated = fs.readFileSync(output, 'utf8')
+    for (let attempt = 0; attempt < 2; attempt++) sql(generated)
+    expect(sql('SELECT count(*) FROM applicants WHERE selection_year = 2028')).toBe('2')
+    expect(sql("SELECT full_name FROM applicants WHERE selection_year = 2028 AND gender = 'Perempuan'")).toBe(fullName)
+    expect(sql(`SELECT count(*) FROM applicants a JOIN selection_entries e ON e.applicant_id = a.id
+      WHERE a.selection_year = 2028 AND e.year = 2028 AND e.stage = 'semifinalist' AND e.semifinalist_at IS NOT NULL
+      AND a.email IS NULL AND a.date_of_birth IS NULL AND a.height_cm IS NULL AND a.consent = false`)).toBe('2')
+    expect(fs.statSync(output).mode & 0o777).toBe(0o600)
+    sql('DELETE FROM applicants WHERE selection_year = 2028')
   })
 
   it('blocks anon reads/inserts, authenticated selection writes and non-service RPC calls', () => {
@@ -288,5 +315,169 @@ describe.skipIf(!enabled)('PostgreSQL publication and API boundary', () => {
     sql(publish(2034, [71]))
     sql(rpc('publish', ', p_year => 2034'))
     expect(JSON.parse(sql('SELECT snapshot_json FROM selection_announcements WHERE year = 2034'))[0].id).toBe(id(71))
+  })
+
+  describe('service-only manual semifinalist RPC', () => {
+    afterEach(() => {
+      sql(`DELETE FROM applicants WHERE selection_year BETWEEN 2041 AND 2045;
+        DELETE FROM selection_announcements WHERE year BETWEEN 2041 AND 2045;`)
+    })
+
+    it('restricts program enrichment to the service role, including for authenticated admins', () => {
+      const call = `SELECT public.set_selection_study_program('${id(299)}', '${id(299)}');`
+      for (const role of ['anon', 'authenticated']) {
+        expect(sql(`SELECT has_function_privilege('${role}', 'public.set_selection_study_program(uuid,uuid)', 'EXECUTE')`)).toBe('f')
+        expect(() => sql(`SET ROLE ${role}; ${call}`)).toThrow(/permission denied for function set_selection_study_program/)
+      }
+      expect(() => sql(`BEGIN;
+        INSERT INTO auth.users (id, email) VALUES ('${id(298)}', 'program-admin@example.com');
+        UPDATE profiles SET role = 'admin' WHERE id = '${id(298)}';
+        SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '${id(298)}';
+        ${call} COMMIT;`)).toThrow(/permission denied for function set_selection_study_program/)
+      expect(sql("SELECT has_function_privilege('service_role', 'public.set_selection_study_program(uuid,uuid)', 'EXECUTE')")).toBe('t')
+    })
+
+    it('validates programs and selection state before completing and publishing a manual semifinalist', () => {
+      const applicantId = sql(manual(211)).split('\n').at(-1)!
+      const programId = sql("SELECT id FROM study_programs WHERE code = 'TI'")
+      const otherProgramId = sql("SELECT id FROM study_programs WHERE faculty_id <> (SELECT id FROM faculties WHERE code = 'FT') LIMIT 1")
+      const setProgram = (program: string) => `SET ROLE service_role; SELECT public.set_selection_study_program('${applicantId}', ${program});`
+      for (const program of ['NULL', `'${id(299)}'`, `'${otherProgramId}'`]) {
+        expect(() => sql(setProgram(program))).toThrow(/Program studi tidak valid/)
+      }
+      expect(() => sql(setProgram("'not-a-uuid'"))).toThrow(/invalid input syntax/)
+      expect(() => sql(`BEGIN; UPDATE study_programs SET is_active = false WHERE id = '${programId}'; ${setProgram(`'${programId}'`)} COMMIT;`)).toThrow(/Program studi tidak valid/)
+      for (const change of [
+        `UPDATE applicants SET status = 'pending' WHERE id = '${applicantId}';`,
+        `UPDATE applicants SET status = 'finalist' WHERE id = '${applicantId}';`,
+        `UPDATE selection_entries SET stage = 'finalist' WHERE applicant_id = '${applicantId}';`,
+        `UPDATE selection_entries SET stage = 'not_selected_university' WHERE applicant_id = '${applicantId}';`,
+        `UPDATE selection_entries SET year = 2042 WHERE applicant_id = '${applicantId}';`,
+        `UPDATE selection_entries SET semifinalist_at = NULL WHERE applicant_id = '${applicantId}';`,
+        `DELETE FROM selection_entries WHERE applicant_id = '${applicantId}';`,
+      ]) expect(() => sql(`BEGIN; ${change} ${setProgram(`'${programId}'`)} COMMIT;`)).toThrow(/Tahap peserta tidak valid/)
+      expect(() => sql(`SELECT public.set_selection_study_program('${id(299)}', '${programId}');`)).toThrow(/tidak ditemukan/)
+      expect(sql(`SELECT study_program IS NULL FROM applicants WHERE id = '${applicantId}'`)).toBe('t')
+      const history = sql(`SELECT semifinalist_at FROM selection_entries WHERE applicant_id = '${applicantId}'`)
+      sql(setProgram(`'${programId}'`))
+      sql(rpc('stage', `, p_applicant_id => '${applicantId}', p_stage => 'finalist_draft'`))
+      sql(setProgram(`'${programId}'`))
+      expect(sql(`SELECT selection_year FROM applicants WHERE id = '${applicantId}'`)).toBe('2041')
+      expect(sql(`SELECT semifinalist_at FROM selection_entries WHERE applicant_id = '${applicantId}'`)).toBe(history)
+      sql(rpc('registration_year', ', p_year => 2041'))
+      sql(rpc('announcement', ", p_year => 2041, p_title => 'Title', p_body => 'Body'"))
+      sql(rpc('publish', `, p_year => 2041, p_expected_ids => ARRAY['${applicantId}']::uuid[], p_expected_title => 'Title', p_expected_body => 'Body'`))
+      const snapshot = sql('SELECT snapshot_json FROM selection_announcements WHERE year = 2041')
+      expect(JSON.parse(snapshot)[0]).toMatchObject({ id: applicantId, study_program: 'Teknik Informatika' })
+      expect(() => sql(setProgram(`'${programId}'`))).toThrow(/dipublikasikan/)
+      expect(sql('SELECT snapshot_json FROM selection_announcements WHERE year = 2041')).toBe(snapshot)
+    })
+
+    it('serializes program enrichment behind the year lock before locking the applicant', async () => {
+      const applicantId = sql(manual(212, { year: 2045 })).split('\n').at(-1)!
+      const programId = sql("SELECT id FROM study_programs WHERE code = 'TI'")
+      const call = `SELECT public.set_selection_study_program('${applicantId}', '${programId}');`
+      const editing = holdTransaction(call)
+      await editing.locked
+      expect(sql('SELECT pg_try_advisory_xact_lock(10010, 2045)')).toBe('f')
+      expect(await editing.finished).toBe(0)
+      const publishing = holdTransaction(`SELECT pg_advisory_xact_lock(10010, 2045);
+        INSERT INTO selection_announcements (year, published_at) VALUES (2045, now());`)
+      await publishing.locked
+      expect(() => sql(`SET ROLE service_role; ${call}`)).toThrow(/dipublikasikan/)
+      expect(await publishing.finished).toBe(0)
+      expect(sql(`SELECT study_program FROM applicants WHERE id = '${applicantId}'`)).toBe(programId)
+    })
+
+    it('denies anon, authenticated users and authenticated admins', () => {
+      for (const role of ['anon', 'authenticated']) {
+        expect(() => sql(`SET ROLE ${role}; ${manual(201)}`)).toThrow(/permission denied for function create_manual_semifinalist/)
+        expect(sql(`SELECT has_function_privilege('${role}', 'public.create_manual_semifinalist(text,text,uuid,text,integer)', 'EXECUTE')`)).toBe('f')
+      }
+      expect(() => sql(`BEGIN;
+        INSERT INTO auth.users (id, email) VALUES ('${id(201)}', 'manual-admin@example.com');
+        UPDATE profiles SET role = 'admin' WHERE id = '${id(201)}';
+        SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '${id(201)}';
+        ${manual(201)} COMMIT;`)).toThrow(/permission denied for function create_manual_semifinalist/)
+      expect(sql("SELECT has_function_privilege('service_role', 'public.create_manual_semifinalist(text,text,uuid,text,integer)', 'EXECUTE')")).toBe('t')
+      expect(sql('SELECT count(*) FROM applicants WHERE selection_year = 2041')).toBe('0')
+    })
+
+    it.each(['Laki-laki', 'Perempuan'])('creates a verified %s semifinalist with null missing fields and no consent', gender => {
+      const applicantId = sql(`SET ROLE service_role; ${manual(202, { full_name: '  Manual 202  ', phone: ' +62 (813) 2000-0202 ', gender })}`).split('\n').at(-1)!
+      expect(applicantId).toMatch(/^[0-9a-f-]{36}$/)
+      const applicant = JSON.parse(sql(`SELECT row_to_json(a) FROM applicants a WHERE id = '${applicantId}'`))
+      expect(applicant).toMatchObject({
+        id: applicantId, full_name: 'Manual 202', phone: '+62 (813) 2000-0202',
+        faculty: sql("SELECT id::text FROM faculties WHERE code = 'FT'"), gender,
+        selection_year: 2041, status: 'verified', consent: false,
+        created_at: expect.any(String), updated_at: expect.any(String),
+      })
+      for (const field of [
+        'user_id', 'email', 'date_of_birth', 'place_of_birth', 'nim', 'study_program', 'semester',
+        'address', 'city', 'province', 'height_cm', 'weight_kg', 'occupation', 'education',
+        'instagram', 'tiktok', 'facebook', 'ipk', 'foreign_language', 'photo_url',
+        'passport_photo_url', 'fullbody_photo_url', 'ktm_url', 'ktp_url', 'cv_url', 'statement_letter_url', 'essay',
+      ]) expect(applicant[field], field).toBeNull()
+      const entry = JSON.parse(sql(`SELECT row_to_json(e) FROM selection_entries e WHERE applicant_id = '${applicantId}'`))
+      expect(entry).toEqual({ applicant_id: applicantId, year: 2041, stage: 'semifinalist', semifinalist_at: expect.any(String) })
+      expect(Number.isNaN(Date.parse(entry.semifinalist_at))).toBe(false)
+      expect(sql(`SELECT count(*) FROM finalist_profiles WHERE applicant_id = '${applicantId}'`)).toBe('0')
+    })
+
+    it('rejects trimmed case-insensitive duplicate names and normalized phones only within the same year', () => {
+      sql(`SET ROLE service_role; ${manual(203, { full_name: '  Manual Name  ', phone: '+62 (813) 2000-0203' })}`)
+      sql("UPDATE applicants SET full_name = '  MANUAL NAME  ' WHERE selection_year = 2041")
+      expect(() => sql(`SET ROLE service_role; ${manual(204, { full_name: '  manual name  ' })}`)).toThrow(/sudah terdaftar/)
+      for (const phone of ['081320000203', '6281320000203', '+6281320000203', ' +62 (813) 2000-0203 ']) {
+        expect(() => sql(`SET ROLE service_role; ${manual(204, { phone })}`)).toThrow(/sudah terdaftar/)
+      }
+      expect(sql('SELECT count(*) FROM applicants WHERE selection_year = 2041')).toBe('1')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2041')).toBe('1')
+      sql(`SET ROLE service_role; ${manual(203, { full_name: 'manual name', year: 2042 })}`)
+      expect(sql('SELECT count(*) FROM applicants WHERE selection_year = 2042')).toBe('1')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2042')).toBe('1')
+    })
+
+    it.each<Record<string, string | number | null>>([
+      { full_name: null }, { full_name: '' }, { full_name: ' ab ' }, { full_name: 'a'.repeat(201) },
+      { phone: null }, { phone: '0812' }, { phone: '+18005551234' }, { phone: '081320000205?text=x' },
+      { phone: '081320000205\n' }, { phone: '08123 abc' }, { gender: null }, { gender: 'Other' },
+      { year: null }, { year: 1999 }, { year: 2101 }, { year: '2041.5' },
+      { faculty: null }, { faculty: id(299) },
+    ])('rejects invalid RPC fields %j without either row', fields => {
+      expect(() => sql(`SET ROLE service_role; ${manual(205, fields)}`)).toThrow(/Data semifinalis tidak valid|Fakultas tidak ditemukan|invalid input syntax/)
+      expect(sql("SELECT count(*) FROM applicants WHERE phone = '081320000205' OR selection_year = 2041")).toBe('0')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2041')).toBe('0')
+    })
+
+    it('allows draft announcements but rejects new applicants after publication without changing the snapshot', () => {
+      sql("INSERT INTO selection_announcements (year, title, body) VALUES (2043, 'Manual selection', 'Body')")
+      sql(`SET ROLE service_role; ${manual(206, { year: 2043 })}`)
+      sql("UPDATE selection_announcements SET published_at = now(), snapshot_json = '[]'::jsonb WHERE year = 2043")
+      const announcement = sql('SELECT row_to_json(a) FROM selection_announcements a WHERE year = 2043')
+      expect(() => sql(`SET ROLE service_role; ${manual(207, { year: 2043 })}`)).toThrow(/dipublikasikan/)
+      expect(sql('SELECT row_to_json(a) FROM selection_announcements a WHERE year = 2043')).toBe(announcement)
+      expect(sql('SELECT count(*) FROM applicants WHERE selection_year = 2043')).toBe('1')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2043')).toBe('1')
+      sql(`SET ROLE service_role; ${manual(207, { year: 2042 })}`)
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2042')).toBe('1')
+    })
+
+    it('rolls back the applicant on selection insertion failure and rolls back the temporary failing trigger', () => {
+      expect(() => sql(`BEGIN;
+        CREATE FUNCTION fail_manual_selection_test() RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN RAISE EXCEPTION 'manual selection insert failed'; END $$;
+        CREATE TRIGGER fail_manual_selection_test BEFORE INSERT ON selection_entries
+          FOR EACH ROW EXECUTE FUNCTION fail_manual_selection_test();
+        SET LOCAL ROLE service_role; ${manual(208, { year: 2044 })} COMMIT;`)).toThrow(/manual selection insert failed/)
+      expect(sql("SELECT count(*) FROM applicants WHERE phone = '081320000208'")).toBe('0')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2044')).toBe('0')
+      expect(sql("SELECT count(*) FROM pg_trigger WHERE tgname = 'fail_manual_selection_test'")).toBe('0')
+      expect(sql("SELECT to_regprocedure('public.fail_manual_selection_test()') IS NULL")).toBe('t')
+      sql(`SET ROLE service_role; ${manual(208, { year: 2044 })}`)
+      expect(sql("SELECT count(*) FROM applicants WHERE phone = '081320000208'")).toBe('1')
+      expect(sql('SELECT count(*) FROM selection_entries WHERE year = 2044')).toBe('1')
+    })
   })
 })

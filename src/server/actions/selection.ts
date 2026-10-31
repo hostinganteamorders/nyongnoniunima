@@ -3,9 +3,10 @@
 import { requireAdmin, getAdminClient } from '@/lib/supabase/admin'
 import { getLocalDb, isUsingLocalDb, localQuery } from '@/lib/db/local'
 import { AUDITION_START } from '@/lib/validations/registration'
+import { manualSemifinalistSchema } from '@/lib/validations/manual-semifinalist'
 import { revalidatePath } from 'next/cache'
 import {
-  isValidWhatsAppGroupUrl, nextSelectionStage, parseSelectionYear, selectionAnnouncement, validateSelectionYear,
+  isValidWhatsAppGroupUrl, nextSelectionStage, normalizeIndonesianPhone, parseSelectionYear, selectionAnnouncement, validateSelectionYear,
   type SelectionStage, type SelectionApplicant, type SelectionAdminData, type SelectionAnnouncement,
 } from '@/lib/selection'
 
@@ -26,6 +27,60 @@ async function activeRegistrationYear(): Promise<number> {
 
 function refreshSelection(): void {
   for (const route of ['/admin/selection', '/admin/applicants', '/admin/finalists', '/finalists', '/announcements', '/register']) revalidatePath(route)
+}
+
+export async function createManualSemifinalist(input: {
+  full_name: string; phone: string; faculty: string; gender: string; selection_year: number
+}): Promise<void> {
+  await requireAdmin()
+  const data = manualSemifinalistSchema.parse(input)
+  if (isUsingLocalDb()) {
+    const db = getLocalDb()
+    db.transaction(() => {
+      const announcement = db.prepare('SELECT published_at FROM selection_announcements WHERE year = ?').get(data.selection_year) as { published_at: string | null } | undefined
+      if (announcement?.published_at) throw new Error('Seleksi tahun ini sudah dipublikasikan')
+      if (!db.prepare('SELECT 1 FROM faculties WHERE id = ?').get(data.faculty)) throw new Error('Fakultas tidak ditemukan')
+      const existing = db.prepare('SELECT phone, full_name FROM applicants WHERE selection_year = ?').all(data.selection_year) as { phone: string; full_name: string }[]
+      const normalized = normalizeIndonesianPhone(data.phone)
+      if (existing.some(row => {
+        if (row.full_name.trim().toLowerCase() === data.full_name.toLowerCase()) return true
+        try { return normalizeIndonesianPhone(row.phone) === normalized } catch { return false }
+      })) throw new Error('Peserta dengan nama atau nomor WhatsApp ini sudah terdaftar pada tahun tersebut')
+      const id = crypto.randomUUID()
+      db.prepare(`INSERT INTO applicants (id, full_name, phone, faculty, gender, selection_year, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'verified')`).run(id, data.full_name, data.phone, data.faculty, data.gender, data.selection_year)
+      db.prepare("INSERT INTO selection_entries (applicant_id, year, stage, semifinalist_at) VALUES (?, ?, 'semifinalist', ?)")
+        .run(id, data.selection_year, new Date().toISOString())
+    }).immediate()
+  } else {
+    const { error } = await getAdminClient().rpc('create_manual_semifinalist', {
+      p_full_name: data.full_name, p_phone: data.phone, p_faculty: data.faculty, p_gender: data.gender, p_year: data.selection_year,
+    })
+    if (error) throw new Error(error.message)
+  }
+  refreshSelection()
+}
+
+export async function setSelectionStudyProgram(applicantId: string, programId: string): Promise<void> {
+  await requireAdmin()
+  if (typeof applicantId !== 'string' || !applicantId || typeof programId !== 'string' || !programId) throw new Error('Peserta atau program studi tidak valid')
+  if (isUsingLocalDb()) {
+    const db = getLocalDb()
+    db.transaction(() => {
+      const applicant = db.prepare('SELECT status, faculty, selection_year FROM applicants WHERE id = ?').get(applicantId) as { status: string; faculty: string | null; selection_year: number } | undefined
+      if (!applicant) throw new Error('Peserta tidak ditemukan')
+      const announcement = db.prepare('SELECT published_at FROM selection_announcements WHERE year = ?').get(applicant.selection_year) as { published_at: string | null } | undefined
+      if (announcement?.published_at) throw new Error('Seleksi tahun ini sudah dipublikasikan')
+      const entry = db.prepare('SELECT year, stage, semifinalist_at FROM selection_entries WHERE applicant_id = ?').get(applicantId) as { year: number; stage: string; semifinalist_at: string | null } | undefined
+      if (!entry || entry.year !== applicant.selection_year || applicant.status !== 'verified' || !entry.semifinalist_at || !['semifinalist', 'finalist_draft'].includes(entry.stage)) throw new Error('Tahap peserta tidak valid untuk melengkapi program studi')
+      if (!db.prepare('SELECT 1 FROM study_programs WHERE id = ? AND faculty_id = ? AND is_active = 1').get(programId, applicant.faculty)) throw new Error('Program studi tidak valid atau tidak aktif untuk fakultas peserta')
+      db.prepare("UPDATE applicants SET study_program = ?, updated_at = datetime('now') WHERE id = ?").run(programId, applicantId)
+    }).immediate()
+  } else {
+    const { error } = await getAdminClient().rpc('set_selection_study_program', { p_applicant_id: applicantId, p_program_id: programId })
+    if (error) throw new Error(error.message)
+  }
+  refreshSelection()
 }
 
 export async function getSelectionAdminData(year?: number): Promise<SelectionAdminData> {

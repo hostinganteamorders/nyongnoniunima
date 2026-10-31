@@ -107,22 +107,22 @@ function initSchema(database: Database.Database) {
       id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
       user_id TEXT REFERENCES profiles(id) ON DELETE SET NULL,
       full_name TEXT NOT NULL,
-      email TEXT NOT NULL,
+      email TEXT,
       phone TEXT NOT NULL,
-      date_of_birth TEXT NOT NULL,
+      date_of_birth TEXT,
       place_of_birth TEXT,
       gender TEXT CHECK (gender IN ('Laki-laki', 'Perempuan')),
       nim TEXT,
       faculty TEXT,
       study_program TEXT,
       semester INTEGER,
-      address TEXT NOT NULL,
-      city TEXT NOT NULL,
-      province TEXT NOT NULL,
-      height_cm REAL NOT NULL DEFAULT 165,
-      weight_kg REAL NOT NULL DEFAULT 60,
-      occupation TEXT NOT NULL DEFAULT '',
-      education TEXT NOT NULL DEFAULT '',
+      address TEXT,
+      city TEXT,
+      province TEXT,
+      height_cm REAL,
+      weight_kg REAL,
+      occupation TEXT,
+      education TEXT,
       instagram TEXT,
       tiktok TEXT,
       facebook TEXT,
@@ -271,6 +271,33 @@ function initSchema(database: Database.Database) {
   migrateStaleCategoryChecks(database)
   migrateAcademicCatalog(database)
   migrateSelection(database)
+  migrateManualApplicants(database)
+}
+
+function migrateManualApplicants(database: Database.Database): void {
+  const fields = ['email', 'date_of_birth', 'address', 'city', 'province', 'height_cm', 'weight_kg', 'occupation', 'education']
+  const columns = database.prepare('PRAGMA table_info(applicants)').all() as { name: string; notnull: number; dflt_value: unknown }[]
+  if (!columns.some(c => fields.includes(c.name) && (c.notnull || c.dflt_value !== null))) return
+
+  let sql = getTableSql(database, 'applicants').replace(/CREATE TABLE(?: IF NOT EXISTS)?\s+"?applicants"?/i, 'CREATE TABLE applicants_manual_migrate')
+  for (const field of fields) {
+    sql = sql.replace(new RegExp(`(\\b${field}\\s+(?:TEXT|REAL|NUMERIC))(?:\\s+NOT NULL)?(?:\\s+DEFAULT\\s+(?:[0-9.]+|''))?`, 'i'), '$1')
+  }
+  const objects = database.prepare("SELECT sql FROM sqlite_master WHERE tbl_name = 'applicants' AND type IN ('index', 'trigger') AND sql IS NOT NULL").all() as { sql: string }[]
+  const names = columns.map(c => `"${c.name.replace(/"/g, '""')}"`).join(', ')
+  // Disable FK enforcement outside the transaction so linked profiles and stages survive the rebuild.
+  database.pragma('foreign_keys = OFF')
+  try {
+    database.transaction(() => {
+      database.exec(sql)
+      database.exec(`INSERT INTO applicants_manual_migrate (${names}) SELECT ${names} FROM applicants`)
+      database.exec('DROP TABLE applicants; ALTER TABLE applicants_manual_migrate RENAME TO applicants')
+      for (const object of objects) database.exec(object.sql)
+      if ((database.pragma('foreign_key_check') as unknown[]).length) throw new Error('Relasi peserta tidak valid setelah migrasi')
+    }).immediate()
+  } finally {
+    database.pragma('foreign_keys = ON')
+  }
 }
 
 function migrateAcademicCatalog(database: Database.Database): void {

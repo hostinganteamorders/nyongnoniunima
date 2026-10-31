@@ -100,6 +100,25 @@ node -e "require('better-sqlite3')('data/nyong-noni.db').close()"
 2. Import repo di Vercel, build command `pnpm build`
 3. Jika ingin memakai Supabase, set env vars di bawah; tanpa env vars aplikasi memakai SQLite lokal.
 
+## Semifinalis Manual
+
+Terapkan `supabase/migrations/00012_manual_semifinalists.sql` pada Supabase sebelum memakai **Tambah Semifinalis** di `/admin/selection`. SQLite dimigrasikan otomatis. Data pendaftaran yang belum tersedia disimpan sebagai `NULL`; validasi pendaftaran publik tetap lengkap. Program studi asli harus dilengkapi sebelum publikasi finalis.
+
+Impor daftar privat memakai format JSON berisi `full_name`, `phone`, `faculty_code` (`FT` untuk FATEK), `gender`, dan `selection_year`:
+
+```bash
+node --env-file=.env.local scripts/import-semifinalists.cjs data/semifinalists-2026.private.json
+node --env-file=.env.local scripts/import-semifinalists.cjs data/semifinalists-2026.private.json --apply
+```
+
+Perintah pertama hanya memeriksa; `--apply` menyimpan peserta melalui transaksi server dan memverifikasi tahapnya. Peserta yang sudah cocok dilewati, konflik tidak ditimpa. File `data/*.private.*` tidak masuk Git karena berisi kontak pribadi.
+
+Untuk menyiapkan satu file SQL privat berisi migrasi dan impor transaksional bagi SQL Editor Supabase:
+
+```bash
+node scripts/import-semifinalists.cjs data/semifinalists-2026.private.json --sql-file data/semifinalists-2026.private.sql
+```
+
 ## Environment Variables
 
 ```
