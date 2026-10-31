@@ -260,6 +260,19 @@ describe('staged selection workflow', () => {
     expect(db.prepare('SELECT count(*) AS n FROM faculty_whatsapp_groups').get()).toEqual({ n: 2 })
   })
 
+  it('persists the complete WhatsApp share link and preserves its parameters in invitations after reopening', async () => {
+    const url = 'https://chat.whatsapp.com/ShareToken123?s=cl&p=i&mlu=4&ilr=4&iam=2'
+    await selection.saveFacultyWhatsAppGroup(2026, 'ft', url)
+    db.close()
+    vi.resetModules()
+    db = (await import('@/lib/db/local')).getLocalDb()
+    selection = await import('@/server/actions/selection')
+    const saved = (await selection.getSelectionAdminData(2026)).groups.find(group => group.faculty_id === 'ft')!
+    expect(saved.invite_url).toBe(url)
+    const invitation = new URL(buildSemifinalistWhatsAppUrl({ name: 'Participant', phone: '081234567890', faculty: 'Teknik', year: 2026, groupUrl: saved.invite_url }))
+    expect(invitation.searchParams.get('text')?.split('\n')).toContain(url)
+  })
+
   it('authenticates every admin entry point before any database access', async () => {
     auth.requireAdmin.mockRejectedValue(new Error('Unauthorized'))
     const prepare = vi.spyOn(db, 'prepare')
@@ -453,10 +466,13 @@ describe('WhatsApp helper', () => {
   it.each(['0812', '621234567890', '+18005551234', '08123 abc', '628123456789012345', '081234567890?text=x', '081234567890\n'])('rejects invalid phone %s', phone => {
     expect(() => normalizeIndonesianPhone(phone)).toThrow()
   })
-  it('accepts official group share mode parameters', () => {
-    expect(isValidWhatsAppGroupUrl('https://chat.whatsapp.com/Token123?mode=gi_t')).toBe(true)
+  it.each([
+    '', '?mode=gi_t', '?s=cl&p=i&mlu=4&ilr=4&iam=2',
+    '?iam=2&ilr=4&mlu=4&p=i&s=cl', '?mode=gi_t&s=cl&p=i&mlu=4&ilr=4&iam=2',
+  ])('accepts official group share parameters %s without changing the link', parameters => {
+    expect(isValidWhatsAppGroupUrl(`https://chat.whatsapp.com/Token123${parameters}`)).toBe(true)
   })
-  it.each(['http://chat.whatsapp.com/Token', 'https://chat.whatsapp.com.evil/Token', 'https://chat.whatsapp.com/Token?x=1', 'https://chat.whatsapp.com/Token/', 'https://chat.whatsapp.com/Token#x', 'https://user@chat.whatsapp.com/Token', 'https://chat.whatsapp.com/', 'https://chat.whatsapp.com/%61', 'https://chat.whatsapp.com/Token\n'])('rejects unsafe group %s', url => {
+  it.each(['http://chat.whatsapp.com/Token', 'https://chat.whatsapp.com.evil/Token', 'https://chat.whatsapp.com/Token?x=1', 'https://chat.whatsapp.com/Token?s=cl&redirect=https://evil.example', 'https://chat.whatsapp.com/Token?s=cl#x', 'https://chat.whatsapp.com/Token?s=cl&p=', 'https://chat.whatsapp.com/Token/', 'https://chat.whatsapp.com/Token#x', 'https://user@chat.whatsapp.com/Token', 'https://chat.whatsapp.com/', 'https://chat.whatsapp.com/%61', 'https://chat.whatsapp.com/Token\n'])('rejects unsafe group %s', url => {
     expect(isValidWhatsAppGroupUrl(url)).toBe(false)
   })
   it('does not allow direct publication even at the pure transition layer', () => {

@@ -363,7 +363,7 @@ describe('Selection admin', () => {
 
   it('keeps a saved group visible, confirms it inline, and preserves other unsaved faculty links', async () => {
     const user = userEvent.setup()
-    const url = 'https://chat.whatsapp.com/NewToken?mode=gi_t'
+    const url = 'https://chat.whatsapp.com/NewToken?s=cl&p=i&mlu=4&ilr=4&iam=2'
     const saved = data({ groups: [{ faculty_id: 'f1', invite_url: url }] })
     vi.mocked(getSelectionAdminData).mockResolvedValue(saved)
     const view = render(<SelectionClient initialData={data()} />)

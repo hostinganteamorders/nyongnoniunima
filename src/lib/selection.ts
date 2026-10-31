@@ -56,7 +56,7 @@ export function normalizeIndonesianPhone(phone: string): string {
 }
 
 export function isValidWhatsAppGroupUrl(url: string): boolean {
-  return typeof url === 'string' && url === url.trim() && /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+(?:\?mode=[A-Za-z0-9_]+)?$/.test(url)
+  return typeof url === 'string' && url === url.trim() && /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+(?:\?(?:mode|s|p|mlu|ilr|iam)=[A-Za-z0-9_-]+(?:&(?:mode|s|p|mlu|ilr|iam)=[A-Za-z0-9_-]+)*)?$/.test(url)
 }
 
 export function buildSemifinalistWhatsAppUrl({ name, phone, faculty, year, groupUrl }: {
