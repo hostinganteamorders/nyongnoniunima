@@ -246,7 +246,7 @@ it('rejects ambiguous legacy/canonical faculties without merging them', async ()
 it('keeps the setup catalog suffix identical to migration 00011', () => {
   const setup = fs.readFileSync(path.join(project, 'supabase/setup.sql'), 'utf8')
   const migration = fs.readFileSync(path.join(project, 'supabase/migrations/00011_academic_catalog.sql'), 'utf8')
-  expect(setup.slice(setup.indexOf('-- Preserve catalog IDs'))).toBe(migration)
+  expect(setup.slice(setup.indexOf('-- Preserve catalog IDs'), setup.indexOf('-- Bagian 8:')).trim()).toBe(migration.trim())
   const normalize = (sql: string) => sql.split('\n').filter(line => line.trim() && !line.trim().startsWith('--')).join('\n').trim()
   const selection = fs.readFileSync(path.join(project, 'supabase/migrations/00010_staged_selection.sql'), 'utf8')
   expect(normalize(setup.slice(setup.indexOf('-- Bagian 6:'), setup.indexOf('-- Bagian 7:')))).toBe(normalize(selection))

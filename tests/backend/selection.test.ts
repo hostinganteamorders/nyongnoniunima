@@ -252,8 +252,8 @@ describe('staged selection workflow', () => {
     await selection.saveFacultyWhatsAppGroup(2026, 'ft', '')
     expect((await selection.getSelectionAdminData(2026)).groups).toEqual([{ faculty_id: 'fe', invite_url: `${url}Other` }])
     expect((await selection.getSelectionAdminData(2025)).groups).toEqual([{ faculty_id: 'ft', invite_url: `${url}Old` }])
-    await expect(selection.saveFacultyWhatsAppGroup(2026, 'missing', url)).rejects.toThrow()
-    await expect(selection.saveFacultyWhatsAppGroup(2026, 'ft', `${url}?evil=1`)).rejects.toThrow()
+    await expect(selection.saveFacultyWhatsAppGroup(2026, 'missing', url)).resolves.toEqual({ error: 'Fakultas tidak ditemukan' })
+    await expect(selection.saveFacultyWhatsAppGroup(2026, 'ft', `${url}?evil=1`)).resolves.toEqual({ error: 'Fakultas atau tautan grup tidak valid' })
     db.close()
     vi.resetModules()
     db = (await import('@/lib/db/local')).getLocalDb()
@@ -262,7 +262,7 @@ describe('staged selection workflow', () => {
 
   it('persists the complete WhatsApp share link and preserves its parameters in invitations after reopening', async () => {
     const url = 'https://chat.whatsapp.com/ShareToken123?s=cl&p=i&mlu=4&ilr=4&iam=2'
-    await selection.saveFacultyWhatsAppGroup(2026, 'ft', url)
+    await expect(selection.saveFacultyWhatsAppGroup(2026, 'ft', url)).resolves.toEqual({ success: true })
     db.close()
     vi.resetModules()
     db = (await import('@/lib/db/local')).getLocalDb()
@@ -278,11 +278,12 @@ describe('staged selection workflow', () => {
     const prepare = vi.spyOn(db, 'prepare')
     const calls = [
       () => selection.getSelectionAdminData(), () => selection.setRegistrationYear(2027),
-      () => selection.updateSelectionStage('id', 'semifinalist'), () => selection.saveFacultyWhatsAppGroup(2026, 'ft', ''),
+      () => selection.updateSelectionStage('id', 'semifinalist'),
       () => selection.saveSelectionAnnouncement(2026, 'Title', 'Body'), () => selection.publishFinalists(2026),
       () => applicants.updateApplicantStatus('id', 'verified'), () => applicants.createApplicant({} as never),
     ]
     for (const call of calls) await expect(call()).rejects.toThrow('Unauthorized')
+    await expect(selection.saveFacultyWhatsAppGroup(2026, 'ft', '')).resolves.toEqual({ error: 'Sesi admin berakhir atau akses ditolak. Silakan login kembali.' })
     expect(prepare).not.toHaveBeenCalled()
     expect(auth.getAdminClient).not.toHaveBeenCalled()
   })
@@ -454,6 +455,26 @@ describe('selection year JSON parsing', () => {
 })
 
 describe('WhatsApp helper', () => {
+  it('includes the 2026 schedule and reply format without changing participant details or the full group link', () => {
+    const groupUrl = 'https://chat.whatsapp.com/ScheduleToken?s=cl&p=i&mlu=4&ilr=4&iam=2'
+    const url = new URL(buildSemifinalistWhatsAppUrl({ name: 'Noni Contoh', phone: '081234567890', faculty: 'FMIPAK', year: 2026, groupUrl }))
+    const text = url.searchParams.get('text')!
+    expect(text).toContain('Selamat Noni Contoh!')
+    expect(text).toContain('Nyong Noni UNIMA 2026 dari FMIPAK.')
+    expect(text).toContain('Hari/tanggal: Selasa, 3 November 2026')
+    expect(text).toContain('Tempat: Auditorium UNIMA')
+    expect(text).toContain('Waktu pelaksanaan akan diinformasikan secepatnya.')
+    expect(text).toContain('Untuk konfirmasi ulang, mohon balas pesan ini dengan format:\nNama Lengkap/Fakultas')
+    expect(text).toContain('Contoh:\nKezia Karundeng/FATEK')
+    expect(text.split('\n')).toContain(groupUrl)
+    expect(text).not.toMatch(/mychaa|01\.16\.10/)
+  })
+  it.each([2025, 2027])('does not reuse the 2026 event details in invitations for %s', year => {
+    const url = new URL(buildSemifinalistWhatsAppUrl({ name: 'Participant', phone: '081234567890', faculty: 'Teknik', year, groupUrl: 'https://chat.whatsapp.com/Token123' }))
+    const text = url.searchParams.get('text')!
+    expect(text).toContain(`Nyong Noni UNIMA ${year}`)
+    expect(text).not.toMatch(/3 November 2026|Auditorium UNIMA|Kezia Karundeng/)
+  })
   it.each(['081234567890', '6281234567890', '+6281234567890', '0812 3456 7890', ' +62 (812) 3456-7890 '])('normalizes %s and builds an encoded invitation, not a send claim', phone => {
     expect(normalizeIndonesianPhone(phone)).toBe('6281234567890')
     const url = new URL(buildSemifinalistWhatsAppUrl({ name: 'A & B', phone, faculty: 'Teknik', year: 2026, groupUrl: 'https://chat.whatsapp.com/Token123' }))

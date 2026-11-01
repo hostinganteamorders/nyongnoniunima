@@ -172,23 +172,41 @@ export async function updateSelectionStage(applicantId: string, stage: Selection
   refreshSelection()
 }
 
-export async function saveFacultyWhatsAppGroup(year: number, facultyId: string, url: string): Promise<void> {
-  await requireAdmin()
-  validateSelectionYear(year)
-  if (typeof facultyId !== 'string' || !facultyId || typeof url !== 'string' || (url !== '' && !isValidWhatsAppGroupUrl(url))) throw new Error('Fakultas atau tautan grup tidak valid')
-  if (isUsingLocalDb()) {
-    const db = getLocalDb()
-    db.transaction(() => {
-      if (!db.prepare('SELECT id FROM faculties WHERE id = ?').get(facultyId)) throw new Error('Fakultas tidak ditemukan')
-      if (!url) db.prepare('DELETE FROM faculty_whatsapp_groups WHERE year = ? AND faculty_id = ?').run(year, facultyId)
-      else db.prepare(`INSERT INTO faculty_whatsapp_groups (year, faculty_id, invite_url) VALUES (?, ?, ?)
-        ON CONFLICT(year, faculty_id) DO UPDATE SET invite_url = excluded.invite_url`).run(year, facultyId, url)
-    }).immediate()
-  } else {
-    const { error } = await getAdminClient().rpc('mutate_selection', { p_operation: 'group', p_year: year, p_faculty_id: facultyId, p_url: url })
-    if (error) throw new Error(error.message)
+export async function saveFacultyWhatsAppGroup(year: number, facultyId: string, url: string): Promise<{ success: true } | { error: string }> {
+  try {
+    await requireAdmin()
+  } catch {
+    return { error: 'Sesi admin berakhir atau akses ditolak. Silakan login kembali.' }
   }
-  refreshSelection()
+  try {
+    validateSelectionYear(year)
+  } catch {
+    return { error: 'Tahun seleksi tidak valid' }
+  }
+  if (typeof facultyId !== 'string' || !facultyId || typeof url !== 'string' || (url !== '' && !isValidWhatsAppGroupUrl(url))) return { error: 'Fakultas atau tautan grup tidak valid' }
+  try {
+    if (isUsingLocalDb()) {
+      const db = getLocalDb()
+      const result = db.transaction(() => {
+        if (!db.prepare('SELECT id FROM faculties WHERE id = ?').get(facultyId)) return { error: 'Fakultas tidak ditemukan' }
+        if (!url) db.prepare('DELETE FROM faculty_whatsapp_groups WHERE year = ? AND faculty_id = ?').run(year, facultyId)
+        else db.prepare(`INSERT INTO faculty_whatsapp_groups (year, faculty_id, invite_url) VALUES (?, ?, ?)
+          ON CONFLICT(year, faculty_id) DO UPDATE SET invite_url = excluded.invite_url`).run(year, facultyId, url)
+      }).immediate()
+      if (result) return result
+    } else {
+      const { error } = await getAdminClient().rpc('mutate_selection', { p_operation: 'group', p_year: year, p_faculty_id: facultyId, p_url: url })
+      if (error) throw error
+    }
+    refreshSelection()
+    return { success: true }
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
+    console.error('WhatsApp group save failed', { code: typeof code === 'string' && /^[A-Z0-9_]+$/.test(code) ? code : 'unknown' })
+    if (code === '23514') return { error: 'Database belum mendukung format link ini. Terapkan migrasi 00013_whatsapp_group_share_parameters.sql di Supabase.' }
+    if (code === '23503' || code === '22P02') return { error: 'Fakultas tidak valid. Muat ulang halaman dan coba kembali.' }
+    return { error: 'Gagal menyimpan link grup. Silakan coba lagi atau hubungi admin.' }
+  }
 }
 
 export async function saveSelectionAnnouncement(year: number, title: string, body: string): Promise<void> {

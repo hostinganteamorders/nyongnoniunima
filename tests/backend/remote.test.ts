@@ -60,6 +60,127 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks())
 
+describe('remote faculty WhatsApp group saves', () => {
+  const url = 'https://chat.whatsapp.com/FacultyToken?s=cl&p=i&mlu=4&ilr=4&iam=2'
+  const genericError = 'Gagal menyimpan link grup. Silakan coba lagi atau hubungi admin.'
+  const migrationError = 'Database belum mendukung format link ini. Terapkan migrasi 00013_whatsapp_group_share_parameters.sql di Supabase.'
+  const privateMessage = 'SQL_SECRET: UPDATE faculty_whatsapp_groups SET invite_url = service_role_secret'
+
+  it.each([
+    [2026, 'ft', url],
+    [undefined, null, {}],
+  ])('returns a safe auth error before validation or client access for %j', async (year, faculty, inviteUrl) => {
+    const { saveFacultyWhatsAppGroup } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.requireAdmin.mockRejectedValueOnce(new Error(privateMessage))
+
+    await expect(saveFacultyWhatsAppGroup(year as never, faculty as never, inviteUrl as never)).resolves.toEqual({
+      error: 'Sesi admin berakhir atau akses ditolak. Silakan login kembali.',
+    })
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+    const logged = log.mock.calls.flat().map(value => value instanceof Error ? `${value.message}\n${value.stack}` : JSON.stringify(value)).join(' ')
+    expect(logged).not.toMatch(/SQL_SECRET|service_role_secret|UPDATE faculty_whatsapp_groups/)
+  })
+
+  it.each([
+    { year: undefined }, { year: null }, { year: '2026' }, { year: 2026.5 },
+    { year: 1999 }, { year: 2101 }, { year: NaN }, { year: Infinity },
+    { faculty: undefined }, { faculty: null }, { faculty: '' }, { faculty: 42 }, { faculty: {} },
+    { inviteUrl: undefined }, { inviteUrl: null }, { inviteUrl: 42 }, { inviteUrl: {} },
+    { inviteUrl: privateMessage }, { inviteUrl: 'https://example.com/FacultyToken' },
+    { inviteUrl: 'javascript:alert(1)' },
+  ])('returns a safe validation error before client access for %j', async overrides => {
+    const { saveFacultyWhatsAppGroup } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const input = { year: 2026, faculty: 'ft', inviteUrl: url, ...overrides }
+
+    const result = await saveFacultyWhatsAppGroup(input.year as never, input.faculty as never, input.inviteUrl as never)
+    expect(result).toEqual({ error: expect.any(String) })
+    expect(JSON.stringify(result)).not.toMatch(/SQL_SECRET|service_role_secret|TypeError|stack|\.trim is not a function/)
+    expect(result).not.toEqual({ error: '' })
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+    const logged = log.mock.calls.flat().map(value => value instanceof Error ? `${value.message}\n${value.stack}` : JSON.stringify(value)).join(' ')
+    expect(logged).not.toMatch(/SQL_SECRET|service_role_secret|FacultyToken/)
+  })
+
+  it.each(['', 'https://chat.whatsapp.com/FacultyToken', url])('returns success and revalidates only after the unchanged group RPC succeeds for %j', async inviteUrl => {
+    const { saveFacultyWhatsAppGroup } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+
+    await expect(saveFacultyWhatsAppGroup(2026, 'ft', inviteUrl)).resolves.toEqual({ success: true })
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).toHaveBeenCalledOnce()
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('mutate_selection', {
+      p_operation: 'group', p_year: 2026, p_faculty_id: 'ft', p_url: inviteUrl,
+    })
+    expect(mocks.requireAdmin.mock.invocationCallOrder[0]).toBeLessThan(mocks.getAdminClient.mock.invocationCallOrder[0])
+    expect(mocks.rpc.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidatePath).mock.invocationCallOrder[0])
+    for (const route of ['/admin/selection', '/admin/applicants', '/admin/finalists', '/finalists', '/announcements', '/register']) {
+      expect(revalidatePath).toHaveBeenCalledWith(route)
+    }
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { code: '23514', expected: migrationError },
+    { code: '23503', expected: expect.stringMatching(/fakultas/i) },
+    { code: '22P02', expected: expect.stringMatching(/fakultas/i) },
+    { code: 'XX000', expected: genericError },
+    { code: undefined, expected: genericError },
+  ])('maps RPC error $code to a safe result without invalidating caches or leaking details', async ({ code, expected }) => {
+    const { saveFacultyWhatsAppGroup } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.rpc.mockResolvedValueOnce({ error: { code, message: privateMessage, details: url, hint: 'PRIVATE_SQL_HINT' } })
+
+    const result = await saveFacultyWhatsAppGroup(2026, 'ft', url)
+    expect(result).toEqual({ error: expected })
+    expect(JSON.stringify(result)).not.toMatch(/SQL_SECRET|service_role_secret|PRIVATE_SQL_HINT|FacultyToken/)
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith('mutate_selection', {
+      p_operation: 'group', p_year: 2026, p_faculty_id: 'ft', p_url: url,
+    })
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalled()
+    const logged = log.mock.calls.flat().map(value => value instanceof Error ? `${value.message}\n${value.stack}` : JSON.stringify(value)).join(' ')
+    expect(logged).not.toMatch(/SQL_SECRET|service_role_secret|PRIVATE_SQL_HINT|FacultyToken|UPDATE faculty_whatsapp_groups|"message"|"details"|"hint"/)
+    if (code) expect(logged).toContain(code)
+  })
+
+  it.each(['client', 'network', 'unexpected'] as const)('returns a generic safe result for a thrown %s error without invalidating caches', async source => {
+    const { saveFacultyWhatsAppGroup } = await import('@/server/actions/selection')
+    const { revalidatePath } = await import('next/cache')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    if (source === 'client') mocks.getAdminClient.mockImplementationOnce(() => { throw new Error(privateMessage) })
+    else mocks.rpc.mockRejectedValueOnce(source === 'network' ? new TypeError(privateMessage) : { message: privateMessage, details: url })
+
+    await expect(saveFacultyWhatsAppGroup(2026, 'ft', url)).resolves.toEqual({ error: genericError })
+    expect(mocks.requireAdmin).toHaveBeenCalledOnce()
+    expect(mocks.getAdminClient).toHaveBeenCalledOnce()
+    expect(mocks.rpc).toHaveBeenCalledTimes(source === 'client' ? 0 : 1)
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.anonymousClient).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalled()
+    const logged = log.mock.calls.flat().map(value => value instanceof Error ? `${value.message}\n${value.stack}` : JSON.stringify(value)).join(' ')
+    expect(logged).not.toMatch(/SQL_SECRET|service_role_secret|FacultyToken/)
+  })
+})
+
 describe('remote manual semifinalist creation', () => {
   const validInput = { full_name: 'John Doe', phone: '081234567890', faculty: 'ft', gender: 'Laki-laki', selection_year: 2026 }
 

@@ -47,6 +47,7 @@ describe('Selection admin', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(getSelectionAdminData).mockResolvedValue(data())
+    vi.mocked(saveFacultyWhatsAppGroup).mockResolvedValue({ success: true })
   })
 
   it('requires manual semifinalist fields, preserves failed input, and resets only after successful reload', async () => {
@@ -176,6 +177,12 @@ describe('Selection admin', () => {
     expect(url.searchParams.get('text')).toContain('Aldo Contoh')
     expect(url.searchParams.get('text')).toContain('Fakultas Bahasa')
     expect(url.searchParams.get('text')).toContain('2026')
+    expect(url.searchParams.get('text')).toContain('Hari/tanggal: Selasa, 3 November 2026')
+    expect(url.searchParams.get('text')).toContain('Tempat: Auditorium UNIMA')
+    expect(url.searchParams.get('text')).toContain('Waktu pelaksanaan akan diinformasikan secepatnya.')
+    expect(url.searchParams.get('text')).toContain('Nama Lengkap/Fakultas')
+    expect(url.searchParams.get('text')).toContain('Kezia Karundeng/FATEK')
+    expect(dialog.getByText(/Hari\/tanggal: Selasa, 3 November 2026/)).toHaveTextContent('Tempat: Auditorium UNIMA')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     expect(open).not.toHaveBeenCalled()
@@ -386,7 +393,7 @@ describe('Selection admin', () => {
   it('shows save failures beside the input without clearing the link and permits retry', async () => {
     const user = userEvent.setup()
     const url = 'https://chat.whatsapp.com/RetryToken'
-    vi.mocked(saveFacultyWhatsAppGroup).mockRejectedValueOnce(new Error('Sesi admin berakhir')).mockResolvedValue(undefined)
+    vi.mocked(saveFacultyWhatsAppGroup).mockRejectedValueOnce(new Error('Sesi admin berakhir')).mockResolvedValue({ success: true })
     vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [{ faculty_id: 'f2', invite_url: url }] }))
     render(<SelectionClient initialData={data()} />)
     const input = screen.getByLabelText('Fakultas Teknik')
@@ -400,6 +407,37 @@ describe('Selection admin', () => {
     await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
     expect(input).toHaveValue(url)
     expect(form.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows a resolved migration error inline without clearing or reading back, then succeeds on retry', async () => {
+    const user = userEvent.setup()
+    const url = 'https://chat.whatsapp.com/RetryToken?s=cl&p=i&mlu=4&ilr=4&iam=2'
+    const error = 'Database belum mendukung format link ini. Terapkan migrasi 00013_whatsapp_group_share_parameters.sql di Supabase.'
+    vi.mocked(saveFacultyWhatsAppGroup).mockResolvedValueOnce({ error })
+    vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [{ faculty_id: 'f2', invite_url: url }] }))
+    render(<SelectionClient initialData={data()} />)
+    const input = screen.getByLabelText('Fakultas Teknik')
+    const form = within(input.closest('form')!)
+    await user.type(input, url)
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    expect(await form.findByRole('alert')).toHaveTextContent(error)
+    expect(input).toHaveValue(url)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(getSelectionAdminData).not.toHaveBeenCalled()
+    expect(form.queryByText('Link grup berhasil disimpan.')).not.toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Simpan Grup' })).toBeEnabled()
+    expect(saveFacultyWhatsAppGroup).toHaveBeenCalledExactlyOnceWith(2026, 'f2', url)
+
+    await user.click(form.getByRole('button', { name: 'Simpan Grup' }))
+    await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
+    expect(saveFacultyWhatsAppGroup).toHaveBeenCalledTimes(2)
+    expect(saveFacultyWhatsAppGroup).toHaveBeenLastCalledWith(2026, 'f2', url)
+    expect(getSelectionAdminData).toHaveBeenCalledExactlyOnceWith(2026)
+    expect(input).toHaveValue(url)
+    expect(input).toBeEnabled()
+    expect(input).not.toHaveAttribute('aria-invalid', 'true')
+    expect(form.queryByRole('alert')).not.toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Simpan Grup' })).toBeDisabled()
   })
 
   it('does not report success or clear the input when the server reload is missing the saved link', async () => {
@@ -447,8 +485,8 @@ describe('Selection admin', () => {
   it('shows progress beside the group and prevents repeat saves until persistence is confirmed', async () => {
     const user = userEvent.setup()
     const url = 'https://chat.whatsapp.com/PendingToken'
-    let finishSave!: () => void
-    vi.mocked(saveFacultyWhatsAppGroup).mockImplementation(() => new Promise<void>(resolve => { finishSave = resolve }))
+    let finishSave!: (result: { success: true } | { error: string }) => void
+    vi.mocked(saveFacultyWhatsAppGroup).mockImplementation(() => new Promise<{ success: true } | { error: string }>(resolve => { finishSave = resolve }))
     vi.mocked(getSelectionAdminData).mockResolvedValue(data({ groups: [{ faculty_id: 'f2', invite_url: url }] }))
     render(<SelectionClient initialData={data()} />)
     const input = screen.getByLabelText('Fakultas Teknik')
@@ -459,7 +497,7 @@ describe('Selection admin', () => {
     expect(input).toBeDisabled()
     expect(form.getByRole('button', { name: 'Menyimpan...' })).toBeDisabled()
     expect(getSelectionAdminData).not.toHaveBeenCalled()
-    finishSave()
+    finishSave({ success: true })
     await waitFor(() => expect(form.getByRole('status')).toHaveTextContent('Link grup berhasil disimpan.'))
     expect(saveFacultyWhatsAppGroup).toHaveBeenCalledTimes(1)
     expect(input).toHaveValue(url)

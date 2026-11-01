@@ -65,7 +65,10 @@ export function buildSemifinalistWhatsAppUrl({ name, phone, faculty, year, group
   validateSelectionYear(year)
   if (!isValidWhatsAppGroupUrl(groupUrl)) throw new Error('Tautan grup WhatsApp tidak valid')
   const normalized = normalizeIndonesianPhone(phone)
-  const text = `Selamat ${name}!\n\nAnda dinyatakan lolos seleksi fakultas dan menjadi semifinalis seleksi universitas Nyong Noni UNIMA ${year} dari ${faculty}.\n\nSilakan bergabung ke grup WhatsApp resmi fakultas Anda:\n${groupUrl}\n\nInformasi jadwal dan persyaratan seleksi tingkat universitas akan disampaikan melalui grup tersebut. Mohon tidak menyebarkan tautan ini kepada pihak lain.\n\nSalam,\nPanitia Nyong Noni UNIMA ${year}`
+  const selectionDetails = year === 2026
+    ? 'Informasi pelaksanaan seleksi:\nHari/tanggal: Selasa, 3 November 2026\nTempat: Auditorium UNIMA\nWaktu pelaksanaan akan diinformasikan secepatnya.\n\nUntuk konfirmasi ulang, mohon balas pesan ini dengan format:\nNama Lengkap/Fakultas\n\nContoh:\nKezia Karundeng/FATEK\n\n'
+    : ''
+  const text = `Selamat ${name}!\n\nAnda dinyatakan lolos seleksi fakultas dan menjadi semifinalis seleksi universitas Nyong Noni UNIMA ${year} dari ${faculty}.\n\n${selectionDetails}Silakan bergabung ke grup WhatsApp resmi fakultas Anda:\n${groupUrl}\n\nInformasi tambahan dan persyaratan seleksi tingkat universitas akan disampaikan melalui grup tersebut. Mohon tidak menyebarkan tautan ini kepada pihak lain.\n\nSalam,\nPanitia Nyong Noni UNIMA ${year}`
   return `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`
 }
 

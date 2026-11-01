@@ -102,6 +102,8 @@ node -e "require('better-sqlite3')('data/nyong-noni.db').close()"
 
 ## Semifinalis Manual
 
+Untuk menerima parameter berbagi WhatsApp pada link grup, terapkan `supabase/migrations/00013_whatsapp_group_share_parameters.sql` di SQL Editor Supabase. Push/deploy aplikasi tidak menerapkan migrasi database secara otomatis. Link disimpan lengkap, termasuk parameter berbagi.
+
 Terapkan `supabase/migrations/00012_manual_semifinalists.sql` pada Supabase sebelum memakai **Tambah Semifinalis** di `/admin/selection`. SQLite dimigrasikan otomatis. Data pendaftaran yang belum tersedia disimpan sebagai `NULL`; validasi pendaftaran publik tetap lengkap. Program studi asli harus dilengkapi sebelum publikasi finalis.
 
 Impor daftar privat memakai format JSON berisi `full_name`, `phone`, `faculty_code` (`FT` untuk FATEK), `gender`, dan `selection_year`:

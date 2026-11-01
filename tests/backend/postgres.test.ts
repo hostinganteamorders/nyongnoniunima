@@ -3,6 +3,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { isValidWhatsAppGroupUrl } from '@/lib/selection'
 
 // Opt-in: an isolated temporary PostgreSQL cluster, never the configured app DB.
 const enabled = process.env.TEST_SELECTION_POSTGRES === '1'
@@ -56,11 +57,47 @@ describe.skipIf(!enabled)('PostgreSQL publication and API boundary', () => {
     sql(fs.readFileSync(path.join(project, 'supabase/setup.sql'), 'utf8'))
     sql(fs.readFileSync(path.join(project, 'supabase/migrations/00010_staged_selection.sql'), 'utf8'))
     sql(fs.readFileSync(path.join(project, 'supabase/migrations/00012_manual_semifinalists.sql'), 'utf8'))
+    sql(fs.readFileSync(path.join(project, 'supabase/migrations/00013_whatsapp_group_share_parameters.sql'), 'utf8'))
   }, 30000)
 
   afterAll(() => {
     if (started) execFileSync('pg_ctl', ['-D', path.join(root, 'db'), '-m', 'immediate', '-w', 'stop'], { stdio: 'pipe' })
     if (root) fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  it('upgrades the old group constraint without losing links and persists complete share links through the RPC', () => {
+    const saveGroup = (year: number, code: string, url: string) => rpc('group', `, p_year => ${year}, p_faculty_id => (SELECT id FROM faculties WHERE code = '${code}'), p_url => '${url.replace(/'/g, "''")}'`)
+    const fullUrl = 'https://chat.whatsapp.com/ShareToken123?s=cl&p=i&mlu=4&ilr=4&iam=2'
+    sql(String.raw`ALTER TABLE faculty_whatsapp_groups DROP CONSTRAINT faculty_whatsapp_groups_invite_url_check;
+      ALTER TABLE faculty_whatsapp_groups ADD CONSTRAINT faculty_whatsapp_groups_invite_url_check
+        CHECK (invite_url ~ '^https://chat\.whatsapp\.com/[A-Za-z0-9]+(\?mode=[A-Za-z0-9_]+)?$');`)
+    sql(saveGroup(2050, 'FT', 'https://chat.whatsapp.com/OriginalToken?mode=gi_t'))
+    const original = sql('SELECT row_to_json(g) FROM faculty_whatsapp_groups g WHERE year = 2050')
+    expect(() => sql(saveGroup(2050, 'FT', fullUrl))).toThrow(/faculty_whatsapp_groups_invite_url_check/)
+    expect(sql('SELECT row_to_json(g) FROM faculty_whatsapp_groups g WHERE year = 2050')).toBe(original)
+    const migration = fs.readFileSync(path.join(project, 'supabase/migrations/00013_whatsapp_group_share_parameters.sql'), 'utf8')
+    sql(migration)
+    sql(migration)
+    expect(sql('SELECT row_to_json(g) FROM faculty_whatsapp_groups g WHERE year = 2050')).toBe(original)
+    for (const url of [fullUrl, 'https://chat.whatsapp.com/Token123', 'https://chat.whatsapp.com/Token123?mode=gi_t', 'https://chat.whatsapp.com/Token123?iam=2&ilr=4&mlu=4&p=i&s=cl', 'https://chat.whatsapp.com/Token123?mode=gi_t&s=cl&p=i&mlu=4&ilr=4&iam=2']) {
+      expect(isValidWhatsAppGroupUrl(url)).toBe(true)
+      sql(`SET ROLE service_role; ${saveGroup(2050, 'FT', url)}`)
+      expect(sql('SELECT invite_url FROM faculty_whatsapp_groups WHERE year = 2050')).toBe(url)
+    }
+    const stored = sql('SELECT invite_url FROM faculty_whatsapp_groups WHERE year = 2050')
+    for (const url of ['http://chat.whatsapp.com/Token', 'https://chat.whatsapp.com.evil/Token', 'https://user@chat.whatsapp.com/Token', 'https://chat.whatsapp.com/Token?x=1', 'https://chat.whatsapp.com/Token?s=cl#x', 'https://chat.whatsapp.com/Token?s=cl&p=', 'https://chat.whatsapp.com/Token\n', 'https://chat.whatsapp.com/%61']) {
+      expect(isValidWhatsAppGroupUrl(url)).toBe(false)
+      expect(() => sql(`SET ROLE service_role; ${saveGroup(2050, 'FT', url)}`)).toThrow(/faculty_whatsapp_groups_invite_url_check/)
+      expect(sql('SELECT invite_url FROM faculty_whatsapp_groups WHERE year = 2050')).toBe(stored)
+    }
+    sql(saveGroup(2051, 'FT', fullUrl))
+    sql(saveGroup(2051, 'FEB', 'https://chat.whatsapp.com/OtherFaculty?s=cl'))
+    sql(saveGroup(2050, 'FT', ''))
+    expect(sql('SELECT count(*) FROM faculty_whatsapp_groups WHERE year = 2050')).toBe('0')
+    expect(sql('SELECT count(*) FROM faculty_whatsapp_groups WHERE year = 2051')).toBe('2')
+    expect(() => sql(`SET ROLE anon; ${saveGroup(2051, 'FT', fullUrl)}`)).toThrow(/permission denied/)
+    expect(() => sql(`SET ROLE authenticated; ${saveGroup(2051, 'FT', fullUrl)}`)).toThrow(/permission denied/)
+    sql('DELETE FROM faculty_whatsapp_groups WHERE year IN (2050, 2051)')
   })
 
   it('generates a private, repeatable SQL import without interpreting names as SQL', () => {

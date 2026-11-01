@@ -165,7 +165,8 @@ export function SelectionClient({ initialData, initialAuditionDate }: { initialD
     setGroupNotices(current => ({ ...current, [facultyId]: { error: false, message: 'Menyimpan link grup...' } }))
     startTransition(async () => {
       try {
-        await saveFacultyWhatsAppGroup(data.year, facultyId, url)
+        const result = await saveFacultyWhatsAppGroup(data.year, facultyId, url)
+        if ('error' in result) throw new Error(result.error)
         const next = await getSelectionAdminData(data.year)
         const savedUrl = next.groups.find(group => group.faculty_id === facultyId)?.invite_url || ''
         if (savedUrl !== url) throw new Error('Link belum terkonfirmasi tersimpan. Input tetap dipertahankan; coba simpan kembali.')
