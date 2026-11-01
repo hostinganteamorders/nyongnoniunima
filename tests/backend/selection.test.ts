@@ -455,12 +455,14 @@ describe('selection year JSON parsing', () => {
 })
 
 describe('WhatsApp helper', () => {
-  it('includes the 2026 schedule and reply format without changing participant details or the full group link', () => {
+  it('includes the 2026 Technical Meeting schedule and reply format without changing participant details or the full group link', () => {
     const groupUrl = 'https://chat.whatsapp.com/ScheduleToken?s=cl&p=i&mlu=4&ilr=4&iam=2'
     const url = new URL(buildSemifinalistWhatsAppUrl({ name: 'Noni Contoh', phone: '081234567890', faculty: 'FMIPAK', year: 2026, groupUrl }))
     const text = url.searchParams.get('text')!
     expect(text).toContain('Selamat Noni Contoh!')
     expect(text).toContain('Nyong Noni UNIMA 2026 dari FMIPAK.')
+    expect(text).toContain('Informasi Technical Meeting:')
+    expect(text).not.toContain('Informasi pelaksanaan seleksi:')
     expect(text).toContain('Hari/tanggal: Selasa, 3 November 2026')
     expect(text).toContain('Tempat: Auditorium UNIMA')
     expect(text).toContain('Waktu pelaksanaan akan diinformasikan secepatnya.')
@@ -473,7 +475,7 @@ describe('WhatsApp helper', () => {
     const url = new URL(buildSemifinalistWhatsAppUrl({ name: 'Participant', phone: '081234567890', faculty: 'Teknik', year, groupUrl: 'https://chat.whatsapp.com/Token123' }))
     const text = url.searchParams.get('text')!
     expect(text).toContain(`Nyong Noni UNIMA ${year}`)
-    expect(text).not.toMatch(/3 November 2026|Auditorium UNIMA|Kezia Karundeng/)
+    expect(text).not.toMatch(/Technical Meeting|3 November 2026|Auditorium UNIMA|Kezia Karundeng/)
   })
   it.each(['081234567890', '6281234567890', '+6281234567890', '0812 3456 7890', ' +62 (812) 3456-7890 '])('normalizes %s and builds an encoded invitation, not a send claim', phone => {
     expect(normalizeIndonesianPhone(phone)).toBe('6281234567890')
