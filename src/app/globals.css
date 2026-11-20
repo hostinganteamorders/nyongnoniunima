@@ -20,8 +20,18 @@
   --color-warning: #F59E0B;
   --color-error: #EF4444;
 
+  /* Redesign 2026 — Navy / Gold / Ivory */
+  --color-navy: #0B1B36;
+  --color-navy-2: #12264A;
+  --color-gold: #C9A45C;
+  --color-gold-deep: #8A6A2B;
+  --color-ivory: #F6F2EA;
+  --color-line: #E7E1D3;
+  --color-chip: #F3EFE6;
+
   /* Typography */
   --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, 'Times New Roman', serif;
 
   /* Border Radius */
   --radius-xs: 4px;
@@ -155,4 +165,47 @@
   .gradient-hero {
     background: linear-gradient(135deg, #2F5593 0%, #1F4176 50%, #103060 100%);
   }
+}
+
+
+/* ───────────────────────────────────────────────────────────
+   Tema publik 2026 — hanya di dalam .site (layout publik).
+   Halaman admin tetap memakai token lama.
+   ─────────────────────────────────────────────────────────── */
+.site {
+  --color-primary-blue: #12264A;
+  --color-primary-blue-dark: #0B1B36;
+  --color-primary-blue-light: #2F5593;
+  --color-accent: #C9A45C;
+  --color-accent-light: #DDBE80;
+  --color-accent-dark: #8A6A2B;
+  --color-light-gray: #F6F2EA;
+  --color-border: #E7E1D3;
+  --color-dark-text: #121A2B;
+  --color-dark-secondary: #586174;
+  --color-ring: #12264A;
+}
+.site .text-display-xxl,
+.site .text-display-xl,
+.site .text-display-lg,
+.site .text-display-md {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.site .gradient-hero { background: linear-gradient(135deg, #0B1B36 0%, #12264A 60%, #1A3566 100%); }
+.site .gradient-blue { background: linear-gradient(135deg, #12264A, #1A3566); }
+.site .gradient-accent { background: linear-gradient(135deg, #C9A45C, #DDBE80); }
+.site ::selection { background-color: #C9A45C; color: #0B1B36; }
+.site :focus-visible { outline: 2px solid #C9A45C; outline-offset: 2px; box-shadow: none; }
+
+.diamond-pattern {
+  background-image:
+    linear-gradient(45deg, rgba(201,164,92,.10) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(201,164,92,.10) 25%, transparent 25%);
+  background-size: 28px 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

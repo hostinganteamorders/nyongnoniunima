@@ -4,9 +4,78 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Cake, GraduationCap, Instagram, ArrowLeft, Heart } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { FACULTY_NAMES, GENDER_LABEL, getFinalist2026 } from '@/lib/finalists-2026'
+import { VoteButton } from '@/components/vote-modal'
+import { VOTE_PRICE_IDR } from '@/lib/site-config'
 
 export default async function FinalistDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  const official = getFinalist2026(id)
+  if (official) {
+    return (
+      <div className="bg-ivory pb-24">
+        <section className="gradient-hero relative overflow-hidden px-5 pb-28 pt-12">
+          <div className="diamond-pattern absolute inset-0 opacity-40" aria-hidden />
+          <div className="relative mx-auto max-w-5xl">
+            <Link
+              href="/finalists"
+              className="inline-flex min-h-11 items-center gap-1 text-sm text-white/75 transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden /> Kembali ke Finalis
+            </Link>
+          </div>
+        </section>
+
+        <section className="relative z-10 mx-auto -mt-20 max-w-5xl px-5">
+          <div className="grid gap-8 md:grid-cols-[1fr_1.4fr]">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border border-line bg-chip shadow-lg">
+              <Image
+                src={official.photo}
+                alt={`Foto ${official.name}`}
+                fill
+                priority
+                sizes="(min-width:768px) 40vw, 100vw"
+                className="object-cover"
+              />
+              <span className="absolute left-4 top-4 rounded-full bg-navy/90 px-4 py-1.5 text-sm font-bold text-gold">
+                No. {official.no}
+              </span>
+            </div>
+
+            <div className="flex flex-col justify-end pb-2 md:pt-24">
+              <span className="text-xs font-semibold uppercase tracking-widest text-gold-deep">
+                Finalis {GENDER_LABEL[official.gender]} UNIMA 2026
+              </span>
+              <h1 className="mt-2 font-serif text-4xl font-semibold leading-tight text-navy sm:text-5xl">
+                {official.name}
+              </h1>
+
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-line bg-white p-4">
+                <GraduationCap className="mt-0.5 size-5 shrink-0 text-gold-deep" aria-hidden />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-dark-secondary">Fakultas</p>
+                  <p className="font-semibold text-navy">{official.faculty}</p>
+                  <p className="text-sm text-dark-secondary">{FACULTY_NAMES[official.faculty]}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-navy p-5 text-white">
+                <p className="text-sm text-white/75">
+                  Dukung {official.name.split(' ')[0]} lewat QRIS. Rp{VOTE_PRICE_IDR.toLocaleString('id-ID')} = 1 suara.
+                </p>
+                <VoteButton finalist={official} className="mt-4 w-full">
+                  Vote {official.name.split(' ')[0]}
+                </VoteButton>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   const finalist = await getPublicFinalist(id)
 
   if (!finalist) notFound()

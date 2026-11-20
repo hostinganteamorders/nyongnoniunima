@@ -1,9 +1,11 @@
-import { getPublicFinalists } from '@/server/actions/finalists'
+import type { Metadata } from 'next'
 import FinalistsClient from './FinalistsClient'
 
-export default async function FinalistsPage() {
-  const finalists = await getPublicFinalists().catch(() => [])
-
-  return <FinalistsClient finalists={finalists} />
+export const metadata: Metadata = {
+  title: 'Finalis 2026',
+  description: 'Kenali 24 finalis Nyong Noni UNIMA 2026 dan dukung favoritmu lewat QRIS.',
 }
-export const dynamic = 'force-dynamic'
+
+export default function FinalistsPage() {
+  return <FinalistsClient />
+}

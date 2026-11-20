@@ -1,104 +1,84 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Countdown } from '@/components/countdown'
-import { FinalistsCarousel } from '@/components/finalists-carousel'
-import { TitleholdersGrid } from '@/components/titleholders-grid'
+import { ArrowRight } from 'lucide-react'
+import { HeroSlideshow } from '@/components/hero-slideshow'
+import { TitleholdersShowcase } from '@/components/titleholders-showcase'
 import { TahapanPemilihan } from '@/components/tahapan'
+import { FinalistCard } from '@/components/finalist-card'
+import { Countdown } from '@/components/countdown'
+import { FINALISTS_2026 } from '@/lib/finalists-2026'
 import { SHOW_SCHEDULE_DATES } from '@/lib/site-config'
-import { getPublicFinalists } from '@/server/actions/finalists'
-import { getPublicNews, getPublicEvents } from '@/server/actions/content'
-import { getCurrentTitleholders, getFaculties, getSponsors, isRegistrationOpen } from '@/server/actions/unima'
-import { ArrowRight, ChevronRight, Clock } from 'lucide-react'
+import { getPublicNews } from '@/server/actions/content'
+import { getCurrentTitleholders, getSponsors, isRegistrationOpen } from '@/server/actions/unima'
+
+const GALLERY = [
+  { src: '/images/GRAND%20FINAL/IMG_9010.JPG', className: 'col-span-2 row-span-2' },
+  { src: '/images/PRANATAL/IMG_8309.JPG', className: '' },
+  { src: '/images/GRAND%20FINAL/IMG_9075.JPG', className: '' },
+  { src: '/images/PHOTOSHOOT/DSC03295.JPG', className: '' },
+  { src: '/images/PRANATAL/IMG_8503.JPG', className: '' },
+  { src: '/images/GRAND%20FINAL/IMG_9116.JPG', className: 'col-span-2' },
+]
+
+function SectionHead({
+  eyebrow,
+  title,
+  action,
+}: {
+  eyebrow: string
+  title: string
+  action?: { href: string; label: string }
+}) {
+  return (
+    <div className="mb-10 flex flex-col justify-between gap-5 md:mb-14 md:flex-row md:items-end">
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-widest text-gold-deep">{eyebrow}</span>
+        <h2 className="mt-3 text-display-xl text-navy">{title}</h2>
+      </div>
+      {action && (
+        <Link
+          href={action.href}
+          className="inline-flex min-h-11 items-center gap-2 self-start rounded-full border border-navy/25 px-6 text-sm font-semibold text-navy transition-colors hover:bg-navy hover:text-white md:self-auto"
+        >
+          {action.label} <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      )}
+    </div>
+  )
+}
 
 export default async function HomePage() {
-  const [finalists, currentTitleholders, news, events, faculties, sponsors, registrationOpen] = await Promise.all([
-    getPublicFinalists().catch(() => []),
+  const [currentTitleholders, news, sponsors, registrationOpen] = await Promise.all([
     getCurrentTitleholders().catch(() => []),
     getPublicNews().catch(() => []),
-    getPublicEvents().catch(() => []),
-    getFaculties().catch(() => []),
     getSponsors().catch(() => []),
     isRegistrationOpen().catch(() => false),
   ])
 
   return (
     <>
-      {/* ─── HERO ─── */}
-      <section className="relative overflow-hidden gradient-hero min-h-[90vh] flex items-center">
-        <div className="absolute inset-0 bg-[url('/hero-pattern.svg')] opacity-10" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/5 to-transparent" />
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
-            <Image
-              src="/images/logo-nyong-noni-unima.png"
-              alt="Logo Nyong Noni UNIMA"
-              width={720}
-              height={796}
-              className="w-40 sm:w-52 lg:w-60 h-auto mb-8 brightness-0 invert drop-shadow-lg"
-              priority
-            />
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-pill px-4 py-2 mb-6">
-              <span className={`h-2 w-2 rounded-full ${registrationOpen ? 'bg-accent animate-pulse' : 'bg-white/60'}`} />
-              <span className="text-accent text-sm font-semibold tracking-wide">
-                {registrationOpen ? 'Pendaftaran Dibuka' : 'Pendaftaran Coming Soon'}
-              </span>
-            </div>
-            <h1 className="text-display-xxl text-white font-bold leading-tight mb-6">
-              Nyong Noni UNIMA
-              <br />
-              <span className="text-accent">Portal Resmi</span>
-            </h1>
-            <p className="text-body-lg text-white/80 max-w-2xl mb-10 leading-relaxed">
-              Platform Resmi Nyong &amp; Noni Universitas Negeri Manado — Memberdayakan Duta Mahasiswa dalam Kepemimpinan, Budaya, Pariwisata, Pelestarian Budaya, dan Keunggulan Akademik.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register">
-                <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-8 text-body font-bold">
-                  {registrationOpen ? 'Daftar Sekarang' : 'Coming Soon'}
-                </Button>
-              </Link>
-              <Link href="/finalists">
-                <Button variant="secondary" size="lg" className="bg-white/10 text-white hover:bg-white/20 border border-white/30 h-14 px-8 text-body font-semibold">
-                  Segera Hadir
-                </Button>
-              </Link>
-            </div>
+      <HeroSlideshow registrationOpen={registrationOpen} />
+
+      {/* ─── FINALIS 2026 ─── */}
+      <section className="bg-ivory py-section">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHead eyebrow="Finalis 2026" title="Kenali & Dukung Finalis" action={{ href: '/finalists', label: 'Lihat 24 finalis' }} />
+          <p className="-mt-6 mb-10 max-w-2xl text-body-lg text-dark-secondary md:-mt-8">
+            Setiap finalis punya kode QRIS sendiri. Rp2.000 = 1 suara.
+          </p>
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+            {FINALISTS_2026.slice(0, 8).map((f) => (
+              <FinalistCard key={f.no} finalist={f} />
+            ))}
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
       </section>
 
-      {/* ─── CURRENT TITLEHOLDERS ─── */}
-      {currentTitleholders.length > 0 && (
-        <section className="py-section bg-white">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-14">
-              <span className="text-caption text-primary-blue font-semibold tracking-widest">
-                NYONG & NONI UNIMA 2025
-              </span>
-              <h2 className="text-display-xl text-dark-text mt-3">Pemegang Gelar Terkini</h2>
-              <div className="w-20 h-1 bg-accent mx-auto mt-4" />
-            </div>
-
-            <TitleholdersGrid titleholders={currentTitleholders} />
-
-            <div className="text-center mt-10">
-              <Link href="/current-titleholders">
-                <Button variant="outline" className="border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white h-12 px-8">
-                  Lihat Semua <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── COUNTDOWN ─── */}
+      {/* ─── COUNTDOWN (disembunyikan sampai jadwal final) ─── */}
       {SHOW_SCHEDULE_DATES && (
-        <section className="py-section bg-primary-blue">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            <span className="text-caption text-accent uppercase tracking-widest">Hitung Mundur Grand Final</span>
+        <section className="bg-navy py-section">
+          <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+            <span className="text-xs font-semibold uppercase tracking-widest text-gold">Hitung Mundur Grand Final</span>
             <div className="mt-6">
               <Countdown targetDate="2026-11-26T19:00:00" />
             </div>
@@ -106,182 +86,111 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ─── TAHAPAN PEMILIHAN ─── */}
+      {/* ─── TAHAPAN ─── */}
       <TahapanPemilihan />
 
-      {/* ─── SPOTLIGHT ─── */}
-      <section className="py-section bg-light-gray">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span className="text-caption text-primary-blue font-semibold tracking-widest">JELAJAHI</span>
-            <h2 className="text-display-xl text-dark-text mt-3">Sorotan</h2>
-            <div className="w-20 h-1 bg-accent mx-auto mt-4" />
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="group block relative overflow-hidden rounded-xxl bg-primary-blue p-8 min-h-[280px] flex flex-col justify-end transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <span className="inline-flex items-center gap-1.5 text-accent text-xs font-semibold uppercase tracking-widest mb-3 relative">
-                <Clock className="h-3.5 w-3.5" /> Segera Hadir
-              </span>
-              <h3 className="text-display-md text-white mb-2 relative">Finalis</h3>
-              <p className="text-body text-white/70 relative">Para finalis Nyong Noni UNIMA akan segera diumumkan.</p>
-            </div>
-            <Link href="/news" className="group block relative overflow-hidden rounded-xxl bg-dark-text p-8 min-h-[280px] flex flex-col justify-end transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-blue/20 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <h3 className="text-display-md text-white mb-2 relative">Berita Terkini</h3>
-              <p className="text-body text-white/70 relative">Ikuti berita dan pengumuman terbaru dari Nyong Noni UNIMA.</p>
-              <span className="inline-flex items-center gap-1 text-accent text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
-                Baca Berita <ArrowRight className="h-4 w-4" />
-              </span>
-            </Link>
-            <Link href="/events" className="group block relative overflow-hidden rounded-xxl bg-primary-blue-dark p-8 min-h-[280px] flex flex-col justify-end transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <h3 className="text-display-md text-white mb-2 relative">Acara Mendatang</h3>
-              <p className="text-body text-white/70 relative">Lihat jadwal acara dan kegiatan Nyong Noni UNIMA mendatang.</p>
-              <span className="inline-flex items-center gap-1 text-accent text-sm font-semibold mt-4 relative group-hover:gap-2 transition-all">
-                Lihat Acara <ArrowRight className="h-4 w-4" />
-              </span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── FINALISTS PREVIEW ─── */}
-      {finalists.length > 0 && (
-        <section className="py-section bg-white">
+      {/* ─── TITLEHOLDERS ─── */}
+      {currentTitleholders.length > 0 && (
+        <section className="bg-ivory py-section">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
-              <div>
-                <span className="text-caption text-primary-blue font-semibold tracking-widest">FINALIS 2026</span>
-                <h2 className="text-display-xl text-dark-text mt-2">Kenali Mereka</h2>
-              </div>
-              <Link href="/finalists">
-                <Button variant="outline" className="border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white">
-                  Lihat Semua <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            <FinalistsCarousel items={finalists} />
+            <SectionHead
+              eyebrow="Nyong & Noni UNIMA 2025"
+              title="Pemegang Gelar Terkini"
+              action={{ href: '/current-titleholders', label: 'Lihat semua' }}
+            />
+            <TitleholdersShowcase titleholders={currentTitleholders as any[]} />
           </div>
         </section>
       )}
 
-      {/* ─── ABOUT ─── */}
-      <section className="py-section bg-light-gray">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="text-caption text-primary-blue font-semibold tracking-widest">TENTANG</span>
-              <h2 className="text-display-xl text-dark-text mt-3 mb-6">Nyong Noni UNIMA</h2>
-              <div className="w-20 h-1 bg-accent mb-6" />
-              <p className="text-body-lg text-dark-secondary leading-relaxed mb-6">
-                Nyong Noni UNIMA adalah organisasi duta mahasiswa resmi Universitas Negeri Manado.
-                Kami mengembangkan mahasiswa dalam kepemimpinan, budaya, promosi pariwisata, public speaking, dampak sosial, dan keunggulan akademik.
-              </p>
-              <p className="text-body text-dark-secondary mb-8">
-                Melalui berbagai program dan kegiatan, kami memberdayakan mahasiswa untuk menjadi duta teladan
-                yang mempromosikan nama Universitas Negeri Manado beserta kekayaan budaya dan potensi pariwisata daerah.
-              </p>
-              <Link href="/about">
-                <Button variant="primary" className="bg-primary-blue text-white hover:bg-primary-blue-dark h-12 px-8">
-                  Selengkapnya <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Kepemimpinan', desc: 'Program', icon: '👥' },
-                { label: 'Budaya', desc: 'Pelestarian', icon: '🏛️' },
-                { label: 'Pariwisata', desc: 'Promosi', icon: '🌴' },
-                { label: 'Sosial', desc: 'Dampak', icon: '🤝' },
-              ].map((item) => (
-                <div key={item.label} className="bg-white rounded-xl border border-border p-6 text-center hover:shadow-md transition-all">
-                  <span className="text-3xl mb-3 block">{item.icon}</span>
-                  <h4 className="text-body-sm font-bold text-dark-text">{item.label}</h4>
-                  <p className="text-body-sm text-dark-secondary">{item.desc}</p>
-                </div>
-              ))}
-            </div>
+      {/* ─── TENTANG ─── */}
+      <section className="bg-navy py-section text-white">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 md:grid-cols-2 lg:px-8">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-gold">Tentang</span>
+            <h2 className="mt-3 text-display-xl text-white">Nyong Noni UNIMA</h2>
+            <p className="mt-6 text-body-lg leading-relaxed text-white/80">
+              Organisasi duta mahasiswa resmi Universitas Negeri Manado yang membina mahasiswa dalam
+              kepemimpinan, budaya, promosi pariwisata, public speaking, dampak sosial, dan prestasi akademik.
+            </p>
+            <Link
+              href="/about"
+              className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-gold px-8 text-base font-bold text-navy transition-colors hover:bg-accent-light"
+            >
+              Selengkapnya <ArrowRight className="size-4" aria-hidden />
+            </Link>
           </div>
-        </div>
-      </section>
-
-      {/* ─── FACULTIES ─── */}
-      {faculties.length > 0 && (
-        <section className="py-section bg-white">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-14">
-              <span className="text-caption text-primary-blue font-semibold tracking-widest">UNIVERSITAS NEGERI MANADO</span>
-              <h2 className="text-display-xl text-dark-text mt-3">Fakultas Kami</h2>
-              <div className="w-20 h-1 bg-accent mx-auto mt-4" />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {faculties.map((f: any) => (
-                <div key={f.id} className="bg-light-gray rounded-xl border border-border p-5 text-center hover:border-primary-blue/30 hover:shadow-sm transition-all">
-                  <h4 className="text-body-sm font-bold text-dark-text">{f.code}</h4>
-                  <p className="text-body-sm text-dark-secondary mt-1">{f.name}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── ACTIVITIES ─── */}
-      <section className="py-section bg-primary-blue">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span className="text-caption text-accent font-semibold tracking-widest">KEGIATAN KAMPUS</span>
-            <h2 className="text-display-xl text-white mt-3">Program &amp; Inisiatif</h2>
-            <div className="w-20 h-1 bg-accent mx-auto mt-4" />
-          </div>
-          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5">
+          <dl className="grid grid-cols-2 gap-4">
             {[
-              { title: 'Kegiatan Mahasiswa', icon: '🎓' },
-              { title: 'Pengabdian Masyarakat', icon: '💚' },
-              { title: 'Program Kepemimpinan', icon: '⭐' },
-              { title: 'Program Budaya', icon: '🎭' },
-              { title: 'Promosi Pariwisata', icon: '🗺️' },
-            ].map((item) => (
-              <div key={item.title} className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-6 text-center hover:bg-white/20 transition-all">
-                <span className="text-3xl mb-3 block">{item.icon}</span>
-                <h4 className="text-body-sm font-semibold text-white">{item.title}</h4>
+              ['Kepemimpinan', 'Program pembinaan'],
+              ['Budaya', 'Pelestarian'],
+              ['Pariwisata', 'Promosi daerah'],
+              ['Sosial', 'Dampak nyata'],
+            ].map(([t, d]) => (
+              <div key={t} className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                <dt className="font-serif text-lg font-semibold text-gold">{t}</dt>
+                <dd className="mt-1 text-sm text-white/70">{d}</dd>
               </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* ─── GALERI ─── */}
+      <section className="bg-white py-section">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHead eyebrow="Galeri" title="Momen Pilihan" action={{ href: '/gallery', label: 'Buka galeri' }} />
+          <div className="grid auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[200px] md:grid-cols-4 md:gap-4">
+            {GALLERY.map((g) => (
+              <Link
+                key={g.src}
+                href="/gallery"
+                aria-label="Buka galeri"
+                className={`group relative overflow-hidden rounded-2xl bg-chip ${g.className}`}
+              >
+                <Image
+                  src={g.src}
+                  alt=""
+                  fill
+                  sizes="(min-width:768px) 25vw, 50vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── LATEST NEWS ─── */}
+      {/* ─── BERITA ─── */}
       {news.length > 0 && (
-        <section className="py-section bg-light-gray">
+        <section className="bg-ivory py-section">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
-              <div>
-                <span className="text-caption text-primary-blue font-semibold tracking-widest">BERITA TERKINI</span>
-                <h2 className="text-display-xl text-dark-text mt-2">Berita &amp; Pembaruan</h2>
-              </div>
-              <Link href="/news">
-                <Button variant="outline" className="border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white">
-                  Semua Berita <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
+            <SectionHead eyebrow="Berita Terkini" title="Berita & Pembaruan" action={{ href: '/news', label: 'Semua berita' }} />
             <div className="grid gap-6 md:grid-cols-3">
               {news.slice(0, 3).map((item: any) => (
-                <Link key={item.id} href={`/news/${item.slug}`} className="group bg-white rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all">
-                  <div className="aspect-[16/9] bg-light-gray relative overflow-hidden">
+                <Link
+                  key={item.id}
+                  href={`/news/${item.slug}`}
+                  className="group overflow-hidden rounded-3xl border border-line bg-white transition-shadow hover:shadow-lg"
+                >
+                  <div className="relative aspect-[16/9] overflow-hidden bg-chip">
                     {item.image_url ? (
-                      <Image src={item.image_url} alt={item.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <Image
+                        src={item.image_url}
+                        alt=""
+                        fill
+                        sizes="(min-width:768px) 33vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-primary-blue/20 text-display-md font-bold">NN</div>
+                      <div className="flex h-full items-center justify-center font-serif text-4xl text-navy/20">NN</div>
                     )}
                   </div>
                   <div className="p-5">
-                    <h3 className="text-body-sm font-bold text-dark-text group-hover:text-primary-blue transition-colors line-clamp-2">{item.title}</h3>
-                    <p className="text-body-sm text-dark-secondary mt-2 line-clamp-2">{item.excerpt}</p>
-                    <span className="inline-flex items-center gap-1 text-primary-blue text-sm font-semibold mt-3 group-hover:gap-2 transition-all">
-                      Baca Selengkapnya <ArrowRight className="h-3 w-3" />
+                    <h3 className="line-clamp-2 font-serif text-lg font-semibold text-navy">{item.title}</h3>
+                    <p className="mt-2 line-clamp-2 text-sm text-dark-secondary">{item.excerpt}</p>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-gold-deep transition-all group-hover:gap-2">
+                      Baca selengkapnya <ArrowRight className="size-3.5" aria-hidden />
                     </span>
                   </div>
                 </Link>
@@ -291,11 +200,11 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ─── SPONSORS ─── */}
+      {/* ─── SPONSOR ─── */}
       {sponsors.length > 0 && (
-        <section className="py-16 bg-white border-t border-border">
+        <section className="border-t border-line bg-white py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <p className="text-center text-caption uppercase tracking-widest text-dark-secondary mb-10">
+            <p className="mb-10 text-center text-xs font-semibold uppercase tracking-widest text-dark-secondary">
               Kolaborasi &amp; Sponsor
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-8">
@@ -306,22 +215,13 @@ export default async function HomePage() {
                     alt={`Logo ${sponsor.name}`}
                     width={240}
                     height={72}
-                    className="h-11 w-auto object-contain grayscale opacity-70 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100"
+                    className="h-11 w-auto object-contain opacity-70 grayscale transition-all duration-300 group-hover:opacity-100 group-hover:grayscale-0"
                   />
                 ) : (
-                  <span className="text-body font-bold text-dark-secondary transition-colors group-hover:text-primary-blue">
-                    {sponsor.name}
-                  </span>
+                  <span className="font-bold text-dark-secondary transition-colors group-hover:text-navy">{sponsor.name}</span>
                 )
                 return sponsor.website ? (
-                  <a
-                    key={sponsor.id}
-                    href={sponsor.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group"
-                    aria-label={sponsor.name}
-                  >
+                  <a key={sponsor.id} href={sponsor.website} target="_blank" rel="noopener noreferrer" className="group" aria-label={sponsor.name}>
                     {logo}
                   </a>
                 ) : (
@@ -336,18 +236,17 @@ export default async function HomePage() {
       )}
 
       {/* ─── CTA ─── */}
-      <section className="py-section bg-gradient-to-r from-primary-blue to-primary-blue-dark text-center">
+      <section className="bg-navy py-section text-center">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-display-xl text-white mb-4">Jadilah Bagian Sejarah</h2>
-          <p className="text-body-lg text-white/80 mb-8 max-w-xl mx-auto">
-            {registrationOpen
-              ? 'Daftar sekarang dan jadilah duta mahasiswa berikutnya Universitas Negeri Manado. Wakili fakultasmu dan tunjukkan bakatmu.'
-              : 'Pendaftaran belum dibuka. Pantau terus untuk menjadi duta mahasiswa berikutnya Universitas Negeri Manado.'}
+          <h2 className="text-display-xl text-white">Dukung Finalis Favoritmu</h2>
+          <p className="mx-auto mt-4 max-w-xl text-body-lg text-white/80">
+            Pilih dari 24 finalis Nyong Noni UNIMA 2026 dan kirim dukunganmu lewat QRIS.
           </p>
-          <Link href="/register">
-            <Button variant="primary" size="lg" className="bg-accent text-dark-text hover:bg-accent-light border-none h-14 px-10 text-body font-bold">
-              {registrationOpen ? 'Daftar Sekarang' : 'Coming Soon'}
-            </Button>
+          <Link
+            href="/finalists"
+            className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-gold px-10 text-base font-bold text-navy transition-colors hover:bg-accent-light"
+          >
+            Lihat Finalis
           </Link>
         </div>
       </section>

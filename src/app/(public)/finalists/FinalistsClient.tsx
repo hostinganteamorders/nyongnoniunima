@@ -1,140 +1,92 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
-import { GraduationCap, MapPin, Clock } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { FinalistCard } from '@/components/finalist-card'
+import { FACULTY_NAMES, FINALISTS_2026, type FinalistGender } from '@/lib/finalists-2026'
+import { VOTE_PRICE_IDR } from '@/lib/site-config'
+import { cn } from '@/lib/utils'
 
-interface FinalistItem {
-  id: string
-  full_name: string
-  faculty: string | null
-  study_program: string | null
-  gender: string | null
-  photo_url: string | null
-  profile?: { tahun?: string | number } | null
-  created_at?: string
-}
+const GENDERS: { value: 'all' | FinalistGender; label: string }[] = [
+  { value: 'all', label: 'Semua' },
+  { value: 'nyong', label: 'Nyong' },
+  { value: 'noni', label: 'Noni' },
+]
 
-interface FinalistsClientProps {
-  finalists: FinalistItem[]
-}
+export default function FinalistsClient() {
+  const [gender, setGender] = useState<'all' | FinalistGender>('all')
+  const [faculty, setFaculty] = useState('all')
 
-export default function FinalistsClient({ finalists }: FinalistsClientProps) {
-  const [yearFilter, setYearFilter] = useState<string>('all')
-  const [genderFilter, setGenderFilter] = useState<string>('all')
+  const faculties = useMemo(() => Array.from(new Set(FINALISTS_2026.map((f) => f.faculty))).sort(), [])
+  const list = FINALISTS_2026.filter(
+    (f) => (gender === 'all' || f.gender === gender) && (faculty === 'all' || f.faculty === faculty),
+  )
 
-  const years = useMemo(() => {
-    const set = new Set<string>()
-    finalists.forEach((f) => {
-      const tahun = f.profile?.tahun
-      if (tahun) set.add(String(tahun))
-    })
-    return Array.from(set).sort((a, b) => Number(b) - Number(a))
-  }, [finalists])
-
-  const filtered = useMemo(() => {
-    return finalists.filter((f) => {
-      if (yearFilter !== 'all') {
-        const tahun = String(f.profile?.tahun || '')
-        if (tahun !== yearFilter) return false
-      }
-      if (genderFilter !== 'all') {
-        if (f.gender?.toLowerCase() !== genderFilter.toLowerCase()) return false
-      }
-      return true
-    })
-  }, [finalists, yearFilter, genderFilter])
+  const chip = (active: boolean) =>
+    cn(
+      'min-h-11 rounded-full border px-5 text-sm font-semibold transition-colors',
+      active ? 'border-navy bg-navy text-gold' : 'border-line bg-white text-navy hover:bg-chip',
+    )
 
   return (
-    <div className="bg-white min-h-screen pb-[120px]">
-      {/* ─── HERO ─── */}
-      <section className="gradient-hero relative flex flex-col items-center justify-center pt-[180px] pb-[96px] px-[20px] text-center">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-caption text-accent-light uppercase tracking-widest mb-4">Finalis</p>
-          <h1 className="text-display-xxl text-white tracking-tighter mb-8 animate-fade-in">
-            Para <br />
-            <span className="text-accent">Finalis</span>
-          </h1>
-          <p className="text-subhead text-white/80 max-w-2xl mx-auto">
-            Mengenal lebih dekat para finalis Nyong Noni UNIMA {new Date().getFullYear()}
+    <>
+      <section className="gradient-hero relative overflow-hidden py-16 text-white sm:py-24">
+        <div className="diamond-pattern absolute inset-0 opacity-40" aria-hidden />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <span className="text-xs font-semibold uppercase tracking-widest text-gold">Pemilihan 2026</span>
+          <h1 className="mt-3 text-display-xxl text-white">Finalis Nyong Noni UNIMA</h1>
+          <p className="mt-5 max-w-2xl text-body-lg text-white/80">
+            24 finalis dari tujuh fakultas. Setiap finalis punya kode QRIS sendiri: Rp
+            {VOTE_PRICE_IDR.toLocaleString('id-ID')} = 1 suara.
           </p>
         </div>
       </section>
 
-      <section className="py-[96px] bg-light-gray">
-        <div className="mx-auto max-w-7xl px-[20px]">
-          {/* ─── FILTERS ─── */}
-          <div className="flex flex-wrap gap-4 mb-12 justify-center">
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30"
-            >
-              <option value="all">Semua Tahun</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
+      <section className="bg-ivory py-12 sm:py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col gap-4">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter Nyong atau Noni">
+              {GENDERS.map((g) => (
+                <button key={g.value} type="button" aria-pressed={gender === g.value} onClick={() => setGender(g.value)} className={chip(gender === g.value)}>
+                  {g.label}
+                </button>
               ))}
-            </select>
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className="bg-white border border-border rounded-lg px-4 py-2.5 text-body-sm text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-blue/30"
-            >
-              <option value="all">Semua Gender</option>
-              <option value="Laki-laki">Laki-laki</option>
-              <option value="Perempuan">Perempuan</option>
-            </select>
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter fakultas">
+              <button type="button" aria-pressed={faculty === 'all'} onClick={() => setFaculty('all')} className={chip(faculty === 'all')}>
+                Semua fakultas
+              </button>
+              {faculties.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  title={FACULTY_NAMES[code]}
+                  aria-pressed={faculty === code}
+                  onClick={() => setFaculty(code)}
+                  className={chip(faculty === code)}
+                >
+                  {code}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="py-20 text-center max-w-xl mx-auto">
-              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-blue/10">
-                <Clock className="h-7 w-7 text-primary-blue" />
-              </div>
-              <h2 className="text-display-md text-dark-text mb-3">Segera Hadir</h2>
-              <p className="text-body-lg text-dark-secondary leading-relaxed">
-                Para finalis Nyong Noni UNIMA akan segera diumumkan. Pantau terus informasi terbaru dari kami.
-              </p>
-            </div>
+          <p className="mb-6 text-sm text-dark-secondary" aria-live="polite">
+            Menampilkan {list.length} dari {FINALISTS_2026.length} finalis
+          </p>
+
+          {list.length === 0 ? (
+            <p className="rounded-2xl border border-line bg-white p-10 text-center text-dark-secondary">
+              Tidak ada finalis untuk filter ini.
+            </p>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filtered.map((f) => (
-                <Link key={f.id} href={`/finalists/${f.id}`} className="group active-scale block">
-                  <div className="bg-white rounded-xl border border-border overflow-hidden p-0 h-full flex flex-col interactive-hover shadow-sm">
-                    <div className="aspect-[3/4] overflow-hidden bg-light-gray flex items-center justify-center relative">
-                      {f.photo_url ? (
-                        <img src={f.photo_url} alt={f.full_name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                      ) : (
-                        <span className="text-display-md text-dark-secondary font-bold">{f.full_name?.charAt(0)}</span>
-                      )}
-                      <span className="absolute top-4 right-4 bg-primary-blue text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">
-                        Finalis
-                      </span>
-                    </div>
-                    <div className="p-6 flex flex-col flex-grow">
-                      <h3 className="text-headline text-dark-text mb-2">{f.full_name}</h3>
-                      <div className="space-y-2 mt-auto">
-                        {f.faculty && (
-                          <div className="flex items-center gap-2 text-body-sm text-dark-secondary">
-                            <GraduationCap className="h-4 w-4 shrink-0 text-primary-blue" />
-                            <span className="truncate">{f.faculty}</span>
-                          </div>
-                        )}
-                        {f.study_program && (
-                          <div className="flex items-center gap-2 text-body-sm text-dark-secondary">
-                            <MapPin className="h-4 w-4 shrink-0 text-primary-blue" />
-                            <span className="truncate">{f.study_program}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
+              {list.map((f) => (
+                <FinalistCard key={f.no} finalist={f} />
               ))}
             </div>
           )}
         </div>
       </section>
-    </div>
+    </>
   )
 }

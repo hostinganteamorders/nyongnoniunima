@@ -3,8 +3,10 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   images: {
     // Vercel Image Optimization mengembalikan 402 (OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED)
-    // di plan ini — nonaktifkan agar gambar disajikan mentah dari /images.
-    unoptimized: true,
+    // di plan ini, jadi tidak memakai /_next/image. Loader kustom mengarahkan foto lokal
+    // /images/** ke salinan WebP ringan di /img-opt/** (dibuat satu kali, ~16 MB vs ~450 MB).
+    loader: 'custom',
+    loaderFile: './src/lib/image-loader.ts',
     remotePatterns: [
       {
         protocol: 'https',
