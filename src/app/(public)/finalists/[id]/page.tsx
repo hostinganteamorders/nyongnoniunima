@@ -17,7 +17,6 @@ export default async function FinalistDetailPage({ params }: { params: Promise<{
     return (
       <div className="bg-ivory pb-24">
         <section className="gradient-hero relative overflow-hidden px-5 pb-28 pt-12">
-          <div className="diamond-pattern absolute inset-0 opacity-40" aria-hidden />
           <div className="relative mx-auto max-w-5xl">
             <Link
               href="/finalists"

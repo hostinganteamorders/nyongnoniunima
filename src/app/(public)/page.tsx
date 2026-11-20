@@ -62,12 +62,12 @@ export default async function HomePage() {
       {/* ─── FINALIS 2026 ─── */}
       <section className="bg-ivory py-section">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHead eyebrow="Finalis 2026" title="Kenali & Dukung Finalis" action={{ href: '/finalists', label: 'Lihat 24 finalis' }} />
+          <SectionHead eyebrow="Finalis 2026" title="Kenali & Dukung Finalis" action={{ href: '/finalists', label: 'Filter & cari finalis' }} />
           <p className="-mt-6 mb-10 max-w-2xl text-body-lg text-dark-secondary md:-mt-8">
             Setiap finalis punya kode QRIS sendiri. Rp2.000 = 1 suara.
           </p>
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-            {FINALISTS_2026.slice(0, 8).map((f) => (
+            {FINALISTS_2026.map((f) => (
               <FinalistCard key={f.no} finalist={f} />
             ))}
           </div>
