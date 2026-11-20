@@ -34,6 +34,9 @@ function Panel({
   if (items.length === 0) return null
   const cur = items[i]
   const go = (d: number) => setI((i + d + items.length) % items.length)
+  // Panel kanan (Noni): chip tersusun dari kanan ke kiri, jadi arah panah dibalik
+  // agar panah kiri bergerak ke kiri dan panah kanan ke kanan.
+  const dir = align === 'right' ? -1 : 1
 
   return (
     <div className="flex flex-col">
@@ -84,16 +87,16 @@ function Panel({
         </div>
         <button
           type="button"
-          onClick={() => go(-1)}
-          aria-label="Sebelumnya"
+          onClick={() => go(-dir)}
+          aria-label="Geser ke kiri"
           className="absolute left-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow transition-colors hover:bg-white"
         >
           <ChevronLeft className="size-5" />
         </button>
         <button
           type="button"
-          onClick={() => go(1)}
-          aria-label="Berikutnya"
+          onClick={() => go(dir)}
+          aria-label="Geser ke kanan"
           className="absolute right-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow transition-colors hover:bg-white"
         >
           <ChevronRight className="size-5" />
@@ -103,7 +106,7 @@ function Panel({
       <div
         className={cn(
           'mt-4 flex flex-wrap gap-2',
-          align === 'right' && 'lg:flex-row-reverse',
+          align === 'right' && 'flex-row-reverse',
         )}
         role="group"
         aria-label={`Pilih gelar ${label}`}
@@ -190,7 +193,7 @@ export function TitleholdersShowcase({ titleholders }: { titleholders: Titlehold
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-deep">Nyong Noni · Duta &amp; Gelar Khusus</p>
             <div className="h-px flex-1 bg-line" />
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
             {duta.map((it) => (
               <DutaCard key={it.id} item={it} />
             ))}
