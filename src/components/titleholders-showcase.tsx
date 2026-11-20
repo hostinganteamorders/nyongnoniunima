@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Instagram } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { GENDER_TITLES, shortGelar } from '@/lib/titleholders'
+import { GENDER_TITLES, isCombinedTitle, shortGelar, titleLabel } from '@/lib/titleholders'
 
 interface Titleholder {
   id: string
@@ -127,16 +127,76 @@ function Panel({
   )
 }
 
+function DutaCard({ item }: { item: Titleholder }) {
+  return (
+    <article className="overflow-hidden rounded-2xl border border-line bg-white">
+      <div className="relative aspect-[3/4] bg-chip">
+        {item.photo_url ? (
+          <Image
+            src={item.photo_url}
+            alt={item.name}
+            fill
+            sizes="(min-width:1024px) 20vw, (min-width:640px) 33vw, 50vw"
+            className="object-cover object-top"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center font-serif text-5xl text-navy/20">
+            {item.name.charAt(0)}
+          </div>
+        )}
+      </div>
+      <div className="p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-deep">
+          {titleLabel(item.title).replace(/ Nyong Noni UNIMA.*$/i, '')}
+        </p>
+        <h3 className="mt-1 font-serif text-base font-semibold leading-tight text-navy">{item.name}</h3>
+        {(item.faculty || item.study_program) && (
+          <p className="mt-1 text-xs text-dark-secondary">
+            {[item.faculty, item.study_program].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        {item.instagram && (
+          <a
+            href={`https://instagram.com/${item.instagram.replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex min-h-8 items-center gap-1 text-xs text-gold-deep hover:underline"
+          >
+            <Instagram className="size-3.5" aria-hidden /> @{item.instagram.replace('@', '')}
+          </a>
+        )}
+      </div>
+    </article>
+  )
+}
+
 export function TitleholdersShowcase({ titleholders }: { titleholders: Titleholder[] }) {
   const pick = (titles: readonly string[]) =>
     titles.map((t) => titleholders.find((th) => th.title === t)).filter(Boolean) as Titleholder[]
   const nyong = pick(GENDER_TITLES.nyong)
   const noni = pick(GENDER_TITLES.noni)
+  const duta = titleholders.filter((th) => isCombinedTitle(th.title))
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
-      <Panel label="Nyong" items={nyong} align="left" />
-      <Panel label="Noni" items={noni} align="right" />
+    <div className="space-y-16">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
+        <Panel label="Nyong" items={nyong} align="left" />
+        <Panel label="Noni" items={noni} align="right" />
+      </div>
+
+      {duta.length > 0 && (
+        <div>
+          <div className="mb-6 flex items-center gap-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-deep">Nyong Noni · Duta &amp; Gelar Khusus</p>
+            <div className="h-px flex-1 bg-line" />
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {duta.map((it) => (
+              <DutaCard key={it.id} item={it} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
