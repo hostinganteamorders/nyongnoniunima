@@ -209,3 +209,13 @@
 @media (prefers-reduced-motion: reduce) {
   .site * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Intro pembuka (kunjungan pertama) */
+.intro-seen .intro-overlay { display: none; }
+@keyframes intro-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes intro-pop { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: none; } }
+@keyframes intro-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.intro-logo { animation: intro-pop .9s cubic-bezier(.2,.8,.2,1) .1s both; }
+.intro-title { animation: intro-rise .9s cubic-bezier(.2,.8,.2,1) .7s both; }
+.intro-line { transform-origin: center; animation: intro-draw .9s cubic-bezier(.2,.8,.2,1) 1.3s both; }
+.intro-tagline { animation: intro-rise .8s ease 1.9s both; }

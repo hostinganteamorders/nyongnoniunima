@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { HeroSlideshow } from '@/components/hero-slideshow'
+import { IntroSplash } from '@/components/intro-splash'
 import { TitleholdersShowcase } from '@/components/titleholders-showcase'
 import { TahapanPemilihan } from '@/components/tahapan'
 import { FinalistCard } from '@/components/finalist-card'
@@ -57,6 +58,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <IntroSplash />
       <HeroSlideshow registrationOpen={registrationOpen} />
 
       {/* ─── FINALIS 2026 ─── */}

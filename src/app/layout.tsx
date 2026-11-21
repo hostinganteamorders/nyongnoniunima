@@ -30,7 +30,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang="id" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Sembunyikan intro pembuka lebih awal bila pengunjung sudah pernah melihatnya. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.getItem('nn-intro-seen')==='1')document.documentElement.classList.add('intro-seen')}catch(e){}",
+          }}
+        />
+        <noscript>
+          <style>{'.intro-overlay{display:none!important}'}</style>
+        </noscript>
+      </head>
       <body className="min-h-screen bg-white text-dark-text font-sans antialiased">
         {children}
       </body>
