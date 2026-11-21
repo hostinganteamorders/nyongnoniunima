@@ -24,24 +24,30 @@ export function HeroSlideshow({ registrationOpen }: { registrationOpen: boolean 
   }, [])
 
   return (
-    <section className="relative isolate flex min-h-[calc(100svh-72px)] items-end overflow-hidden bg-navy">
-      {SLIDES.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt=""
-          fill
-          priority={i === 0}
-          sizes="100vw"
-          className={cn(
-            'object-cover object-center transition-opacity duration-[1600ms]',
-            i === index ? 'opacity-100' : 'opacity-0',
-          )}
+    <section className="relative isolate overflow-hidden bg-navy md:flex md:min-h-[calc(100svh-72px)] md:items-end">
+      {/* HP: foto tampil utuh di atas (rasio 3:2) lalu teks di bawahnya. Desktop: foto jadi latar penuh. */}
+      <div className="relative aspect-[3/2] w-full md:absolute md:inset-0 md:aspect-auto">
+        {SLIDES.map((src, i) => (
+          <Image
+            key={src}
+            src={src}
+            alt=""
+            fill
+            priority={i === 0}
+            sizes="100vw"
+            className={cn(
+              'object-cover object-center transition-opacity duration-[1600ms]',
+              i === index ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+        ))}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-navy via-navy/10 to-transparent md:via-navy/60 md:to-navy/10"
+          aria-hidden
         />
-      ))}
-      <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/60 to-navy/10" aria-hidden />
+      </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-16 pt-32 sm:px-6 lg:px-8 lg:pb-20">
+      <div className="relative z-10 mx-auto -mt-10 w-full max-w-7xl px-4 pb-14 sm:px-6 md:mt-0 md:pb-16 md:pt-32 lg:px-8 lg:pb-20">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-navy/60 px-4 py-2 backdrop-blur">
           <span className={cn('size-2 rounded-full', registrationOpen ? 'animate-pulse bg-gold' : 'bg-white/60')} />
           <span className="text-xs font-semibold tracking-wide text-gold">
