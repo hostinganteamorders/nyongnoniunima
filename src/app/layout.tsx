@@ -32,11 +32,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <head>
-        {/* Sembunyikan intro pembuka lebih awal bila pengunjung sudah pernah melihatnya. */}
+        {/* Sembunyikan intro pembuka lebih awal bila sesi ini sudah melihatnya. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(localStorage.getItem('nn-intro-seen')==='1')document.documentElement.classList.add('intro-seen')}catch(e){}",
+              "try{if(sessionStorage.getItem('nn-intro-seen')==='1')document.documentElement.classList.add('intro-seen')}catch(e){}",
           }}
         />
         <noscript>

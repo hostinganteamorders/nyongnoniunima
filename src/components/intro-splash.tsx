@@ -7,15 +7,16 @@ const STORAGE_KEY = 'nn-intro-seen'
 const HOLD_MS = 3400 // lama intro tampil sebelum memudar
 const FADE_MS = 700
 
-// Intro pembuka: hanya tampil di kunjungan pertama (per browser). Kunjungan berikutnya
-// disembunyikan sejak sebelum render oleh skrip kecil di <head> (kelas "intro-seen" pada <html>),
-// jadi tidak ada kedipan layar navy.
+// Intro pembuka: tampil sekali setiap kali situs dibuka (per sesi tab). Pindah halaman atau
+// refresh di tab yang sama tidak mengulang intro; menutup tab lalu membuka situs lagi akan
+// menampilkannya lagi. Untuk sesi yang sudah melihat intro, skrip kecil di <head> (kelas
+// "intro-seen" pada <html>) menyembunyikannya sebelum render, jadi tidak ada kedipan layar navy.
 export function IntroSplash() {
   const [phase, setPhase] = useState<'show' | 'out' | 'done'>('show')
 
   const finish = useCallback(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, '1')
+      sessionStorage.setItem(STORAGE_KEY, '1')
     } catch {}
     setPhase('out')
   }, [])
@@ -23,12 +24,12 @@ export function IntroSplash() {
   useEffect(() => {
     let seen = false
     try {
-      seen = localStorage.getItem(STORAGE_KEY) === '1'
+      seen = sessionStorage.getItem(STORAGE_KEY) === '1'
     } catch {}
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (seen || reduce) {
       try {
-        localStorage.setItem(STORAGE_KEY, '1')
+        sessionStorage.setItem(STORAGE_KEY, '1')
       } catch {}
       setPhase('done')
       return
