@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Globe, Instagram, Mail, MapPin } from 'lucide-react'
+import { ORDERS_URL } from '@/lib/site-config'
 
 const COLUMNS = [
   {
@@ -111,7 +112,7 @@ export function Footer() {
             &copy; {year} Nyong Noni UNIMA. Hak cipta dilindungi undang-undang.
           </p>
           <a
-            href="https://www.teamorders2k25.com/"
+            href={ORDERS_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Powered by ORDERS"

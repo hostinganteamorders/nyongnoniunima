@@ -8,7 +8,7 @@ import { TahapanPemilihan } from '@/components/tahapan'
 import { FinalistCard } from '@/components/finalist-card'
 import { Countdown } from '@/components/countdown'
 import { FINALISTS_2026 } from '@/lib/finalists-2026'
-import { SHOW_SCHEDULE_DATES } from '@/lib/site-config'
+import { SHOW_SCHEDULE_DATES, resolveSponsorUrl } from '@/lib/site-config'
 import { getPublicNews } from '@/server/actions/content'
 import { getCurrentTitleholders, getSponsors, isRegistrationOpen } from '@/server/actions/unima'
 
@@ -211,6 +211,7 @@ export default async function HomePage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-8">
               {sponsors.map((sponsor: any) => {
+                const website = resolveSponsorUrl(sponsor.website)
                 const logo = sponsor.logo_url ? (
                   <Image
                     src={sponsor.logo_url}
@@ -222,8 +223,8 @@ export default async function HomePage() {
                 ) : (
                   <span className="font-bold text-dark-secondary transition-colors group-hover:text-navy">{sponsor.name}</span>
                 )
-                return sponsor.website ? (
-                  <a key={sponsor.id} href={sponsor.website} target="_blank" rel="noopener noreferrer" className="group" aria-label={sponsor.name}>
+                return website ? (
+                  <a key={sponsor.id} href={website} target="_blank" rel="noopener noreferrer" className="group" aria-label={sponsor.name}>
                     {logo}
                   </a>
                 ) : (
